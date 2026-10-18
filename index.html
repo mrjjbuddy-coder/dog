@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf8">
-<title>Pawsession - Shape Matching Fixed</title>
+<title>Pawsession - Full House Fixed</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
   body { margin: 0; overflow: hidden; background: #241f3a; font-family: sans-serif; color: #fff3dc; user-select: none; }
@@ -19,7 +19,7 @@
 <div id="stage">
   <canvas id="gl"></canvas>
   <div class="hud">
-    <b>Objective:</b> Match the shapes on the blocks to open the gate!<br>
+    <b>Objective:</b> Match the shapes and chase Biscuit!<br>
     <span style="font-size: 12px; color: #bdb4d8;">Drag on the left side of the screen to move.</span>
   </div>
   <div class="toast" id="toast"></div>
@@ -37,7 +37,7 @@
   scene.background = new THREE.Color(0x241f3a);
 
   var camera = new THREE.PerspectiveCamera(50, stage.clientWidth / stage.clientHeight, 0.5, 140);
-  camera.position.set(0, 15, 20);
+  camera.position.set(0, 15, 25);
   camera.lookAt(0, 0, 5);
 
   scene.add(new THREE.HemisphereLight(0xfff3e0, 0x6b5b8a, 0.9));
@@ -52,78 +52,59 @@
     scene.add(m); return m;
   }
 
-  // House Rooms & Floors
+  // Full House Layout & Rooms
   box(12, 0.1, 12, 0x5b3f73, 0, 0, 12); // Living room
   box(12, 0.1, 12, 0x7fc4b8, 0, 0, 0);  // Kitchen
-  box(16, 0.1, 15, 0x5f9f4e, 0, 0, -18); // Yard
+  box(12, 0.1, 12, 0x5b3f73, 0, 0, -12); // Study room
+  box(16, 0.1, 15, 0x5f9f4e, 0, 0, -26); // Backyard
 
-  // Create Texture Canvas with bright visible shapes (Circle, Square, Triangle)
+  // Shape Texture Generator for Blocks
   function createShapeTexture(type, colorHex) {
     var canvas = document.createElement('canvas');
     canvas.width = 128; canvas.height = 128;
     var ctx = canvas.getContext('2d');
     
-    // Background card color
     ctx.fillStyle = '#fff3dc';
     ctx.fillRect(0, 0, 128, 128);
     ctx.strokeStyle = '#241f3a';
     ctx.lineWidth = 8;
     ctx.strokeRect(4, 4, 120, 120);
 
-    // Draw Shape
     ctx.fillStyle = colorHex;
-    ctx.strokeStyle = colorHex;
-    ctx.lineWidth = 10;
-
     if (type === 'circle') {
-      ctx.beginPath();
-      ctx.arc(64, 64, 30, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(64, 64, 30, 0, Math.PI * 2); ctx.fill();
     } else if (type === 'triangle') {
-      ctx.beginPath();
-      ctx.moveTo(64, 25);
-      ctx.lineTo(105, 95);
-      ctx.lineTo(23, 95);
-      ctx.closePath();
-      ctx.fill();
+      ctx.beginPath(); ctx.moveTo(64, 25); ctx.lineTo(105, 95); ctx.lineTo(23, 95); ctx.closePath(); ctx.fill();
     } else if (type === 'square') {
       ctx.fillRect(34, 34, 60, 60);
     }
     return new THREE.CanvasTexture(canvas);
   }
 
-  // Puzzle Blocks with distinct shape symbols on materials
-  var blockMat1 = [
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({ map: createShapeTexture('circle', '#e5484d') }), // Front shape: Red Circle
+  // Puzzle Blocks with visible shapes
+  var b1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), [
+    new THREE.MeshLambertMaterial({color: 0xcccccc}), new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}), new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({ map: createShapeTexture('circle', '#e5484d') }),
     new THREE.MeshLambertMaterial({color: 0xcccccc})
-  ];
+  ]);
+  b1.position.set(-3, 0.9, 2); scene.add(b1);
 
-  var blockMat2 = [
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({ map: createShapeTexture('triangle', '#3e8ef7') }), // Front shape: Blue Triangle
+  var b2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), [
+    new THREE.MeshLambertMaterial({color: 0xcccccc}), new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}), new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({ map: createShapeTexture('triangle', '#3e8ef7') }),
     new THREE.MeshLambertMaterial({color: 0xcccccc})
-  ];
+  ]);
+  b2.position.set(0, 0.9, 2); scene.add(b2);
 
-  var blockMat3 = [
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({color: 0xcccccc}),
-    new THREE.MeshLambertMaterial({ map: createShapeTexture('square', '#3fbf6d') }), // Front shape: Green Square
+  var b3 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), [
+    new THREE.MeshLambertMaterial({color: 0xcccccc}), new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}), new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({ map: createShapeTexture('square', '#3fbf6d') }),
     new THREE.MeshLambertMaterial({color: 0xcccccc})
-  ];
-
-  // Add the 3 puzzle blocks into the room with shapes clearly visible
-  var b1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), blockMat1); b1.position.set(-3, 0.9, 8); scene.add(b1);
-  var b2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), blockMat2); b2.position.set(0, 0.9, 8); scene.add(b2);
-  var b3 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), blockMat3); b3.position.set(3, 0.9, 8); scene.add(b3);
+  ]);
+  b3.position.set(3, 0.9, 2); scene.add(b3);
 
   // Player Ball Character
   var playerMesh = new THREE.Mesh(
@@ -140,7 +121,7 @@
     var el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 2500);
   }
-  toast('Match the shapes (Red Circle, Blue Triangle, Green Square)!');
+  toast('Full house loaded! Chase Biscuit.');
 
   var joyZone = document.getElementById('joyZone');
   joyZone.addEventListener('pointermove', function(e) {
