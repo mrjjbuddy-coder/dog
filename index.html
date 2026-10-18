@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>VoxelCraft Enterprise - Heavyweight Edition</title>
+<title>VoxelCraft Enterprise - Fixed</title>
 <style>
   :root {
     --bg-dark: #07050b;
@@ -23,7 +23,6 @@
   }
   #canvas-container { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   
-  /* HUD & Enterprise Panels */
   .hud { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; z-index: 10; }
   .hud-top { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; gap: 12px; }
   
@@ -41,7 +40,6 @@
   .stats-box { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--text-muted); min-width: 180px; }
   .stats-box b { color: var(--text-main); font-size: 0.95rem; }
   
-  /* Hotbar System */
   .hotbar-container { display: flex; gap: 10px; align-self: center; background: rgba(10, 7, 18, 0.9); padding: 10px; border-radius: 20px; border: 1px solid var(--border); pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
   .slot {
     width: 60px; height: 60px; border-radius: 14px; background: rgba(22, 17, 35, 0.95);
@@ -53,7 +51,6 @@
   .slot-num { position: absolute; top: 4px; left: 8px; font-size: 0.7rem; color: var(--text-muted); font-weight: bold; }
   .slot-count { position: absolute; bottom: 4px; right: 8px; font-size: 0.75rem; font-weight: bold; color: var(--text-main); }
 
-  /* Bottom Controls */
   .hud-bottom { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; }
   .action-buttons { display: flex; gap: 12px; pointer-events: auto; }
   .btn {
@@ -66,20 +63,17 @@
   .btn-accent { background: var(--accent); color: #1a1500; border: none; }
   .btn-accent:hover { background: #ffc333; }
 
-  /* Mobile Joysticks */
   .joystick-zone { position: absolute; left: 24px; bottom: 100px; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,0.02); border: 2px dashed rgba(255,255,255,0.1); pointer-events: auto; display: none; }
   .joystick-knob { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.25); top: 45px; left: 45px; pointer-events: none; transition: transform 0.05s linear; }
 
-  /* Crosshair */
   .crosshair {
     position: absolute; top: 50%; left: 50%; width: 16px; height: 16px;
-    transform: translate(-50%, -50%); pointer-events: none; opacity: 0.85;
+    transform: translate(-50%, -50%); pointer-events: none; opacity: 0.85; display: none;
   }
   .crosshair::before, .crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 6px rgba(0,0,0,0.9); }
   .crosshair::before { top: 7px; left: 0; width: 16px; height: 2px; }
   .crosshair::after { top: 0; left: 7px; width: 2px; height: 16px; }
 
-  /* Enterprise Modals & Menus */
   .modal-screen {
     position: absolute; inset: 0; background: rgba(6, 4, 10, 0.96); backdrop-filter: blur(24px);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -90,7 +84,6 @@
   .modal-title span { color: var(--accent); }
   .modal-desc { max-width: 50ch; color: var(--text-muted); font-size: 1.1rem; line-height: 1.7; margin-bottom: 32px; }
   
-  /* Toast Notifications */
   .toast {
     position: absolute; top: 100px; left: 50%; transform: translateX(-50%) translateY(-10px);
     background: var(--panel-bg); border: 1px solid var(--border); padding: 14px 28px;
@@ -133,13 +126,11 @@
   </div>
 </div>
 
-<div class="crosshair" id="crosshair" style="display: none;"></div>
+<div class="crosshair" id="crosshair"></div>
 <div class="toast" id="toast"></div>
 
-<!-- Mobile Joystick Zone -->
 <div class="joystick-zone" id="joy-zone"><div class="joystick-knob" id="joy-knob"></div></div>
 
-<!-- Main Launch Menu -->
 <div class="modal-screen" id="main-menu">
   <h1 class="modal-title">Voxel<span>Craft</span> Enterprise</h1>
   <p class="modal-desc">Heavy-duty enterprise-grade 3D sandbox engine. Featuring expansive multi-layered fractal terrain generators, real-time lighting pipelines, custom procedural physics, sound synthesis algorithms, and infinite voxel expansion.</p>
@@ -150,15 +141,9 @@
 </div>
 
 <script>
-/**
- * VoxelCraft Enterprise Engine
- * Comprehensive heavyweight architecture featuring modular systems for procedural world gen,
- * chunk optimization, raycasting physics, sound synthesis, and UI management.
- */
 (function () {
   'use strict';
 
-  // --- Constants & System Configuration ---
   const CHUNK_SIZE = 16;
   const WORLD_HEIGHT = 64;
   const VIEW_DISTANCE = 4;
@@ -169,134 +154,4 @@
     OBSIDIAN: 12, ICE: 13, SNOW: 14, MAGMA: 15, COPPER: 16, STEEL: 17
   };
 
-  const BLOCK_DATA = {
-    [BLOCK.GRASS]: { name: 'Grass', color: 0x5b9f4e, transparent: false, emissive: 0 },
-    [BLOCK.DIRT]: { name: 'Dirt', color: 0x8a6a4f, transparent: false, emissive: 0 },
-    [BLOCK.STONE]: { name: 'Stone', color: 0x8c8c9e, transparent: false, emissive: 0 },
-    [BLOCK.WOOD]: { name: 'Oak Wood', color: 0x7a5232, transparent: false, emissive: 0 },
-    [BLOCK.LEAVES]: { name: 'Leaves', color: 0x3f7a43, transparent: true, opacity: 0.9, emissive: 0 },
-    [BLOCK.SAND]: { name: 'Sand', color: 0xd9c382, transparent: false, emissive: 0 },
-    [BLOCK.WATER]: { name: 'Water', color: 0x3b82f6, transparent: true, opacity: 0.7, emissive: 0 },
-    [BLOCK.BRICK]: { name: 'Brick', color: 0xa84334, transparent: false, emissive: 0 },
-    [BLOCK.GOLD]: { name: 'Gold Block', color: 0xffd13b, transparent: false, emissive: 0x443300 },
-    [BLOCK.GLASS]: { name: 'Glass', color: 0xd6f2ff, transparent: true, opacity: 0.4, emissive: 0 },
-    [BLOCK.LANTERN]: { name: 'Lantern', color: 0xfff3a1, transparent: false, emissive: 0xffaa00 },
-    [BLOCK.OBSIDIAN]: { name: 'Obsidian', color: 0x1f192b, transparent: false, emissive: 0x110022 },
-    [BLOCK.ICE]: { name: 'Ice', color: 0x8cf0ff, transparent: true, opacity: 0.8, emissive: 0 },
-    [BLOCK.SNOW]: { name: 'Snow', color: 0xf0f4f8, transparent: false, emissive: 0 },
-    [BLOCK.MAGMA]: { name: 'Magma', color: 0xff4500, transparent: false, emissive: 0xff2200 },
-    [BLOCK.COPPER]: { name: 'Copper', color: 0xd47a43, transparent: false, emissive: 0x221100 },
-    [BLOCK.STEEL]: { name: 'Steel Plating', color: 0x556070, transparent: false, emissive: 0 }
-  };
-
-  const HOTBAR_ITEMS = [
-    BLOCK.GRASS, BLOCK.DIRT, BLOCK.STONE, BLOCK.WOOD, BLOCK.LEAVES,
-    BLOCK.SAND, BLOCK.BRICK, BLOCK.GOLD, BLOCK.GLASS, BLOCK.LANTERN,
-    BLOCK.OBSIDIAN, BLOCK.ICE, BLOCK.SNOW, BLOCK.MAGMA, BLOCK.COPPER, BLOCK.STEEL
-  ];
-
-  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-  function lerp(a, b, t) { return a + (b - a) * t; }
-
-  // --- Multi-Octave Fractal Noise Generator ---
-  const Perm = new Uint8Array(512);
-  const p = new Uint8Array(256);
-  for (let i = 0; i < 256; i++) p[i] = Math.floor(Math.random() * 256);
-  for (let i = 0; i < 512; i++) Perm[i] = p[i & 255];
-
-  function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
-  function grad(hash, x, y) {
-    const h = hash & 7;
-    const u = h < 4 ? x : y;
-    const v = h < 4 ? y : x;
-    return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-  }
-  function noise2D(x, y) {
-    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
-    x -= Math.floor(x); y -= Math.floor(y);
-    const u = fade(x), v = fade(y);
-    const A = Perm[X] + Y, B = Perm[X + 1] + Y;
-    return lerp(
-      lerp(grad(Perm[A], x, y), grad(Perm[B], x - 1, y), u),
-      lerp(grad(Perm[A + 1], x, y - 1), grad(Perm[B + 1], x - 1, y - 1), u),
-      v
-    );
-  }
-  function fractalNoise(x, y, octaves = 6, persistence = 0.5) {
-    let total = 0, frequency = 0.006, amplitude = 1, maxValue = 0;
-    for (let i = 0; i < octaves; i++) {
-      total += noise2D(x * frequency, y * frequency) * amplitude;
-      maxValue += amplitude;
-      amplitude *= persistence;
-      frequency *= 2;
-    }
-    return total / maxValue;
-  }
-
-  // --- Audio Synthesis System ---
-  let audioCtx = null, soundEnabled = true;
-  function initAudio() {
-    if (!audioCtx) {
-      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
-    }
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-  }
-  function playSound(type) {
-    if (!soundEnabled || !audioCtx) return;
-    try {
-      const t = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
-
-      if (type === 'break') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(150, t);
-        osc.frequency.exponentialRampYToValueAtTime ? osc.frequency.exponentialRampToValueAtTime(35, t + 0.2) : osc.frequency.linearRampToValueAtTime(35, t + 0.2);
-        gain.gain.setValueAtTime(0.3, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-        osc.start(t); osc.stop(t + 0.22);
-      } else if (type === 'place') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(260, t);
-        osc.frequency.exponentialRampToValueAtTime(520, t + 0.14);
-        gain.gain.setValueAtTime(0.25, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-        osc.start(t); osc.stop(t + 0.18);
-      } else if (type === 'jump') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(180, t);
-        osc.frequency.linearRampToValueAtTime(360, t + 0.15);
-        gain.gain.setValueAtTime(0.2, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-        osc.start(t); osc.stop(t + 0.2);
-      }
-    } catch(e) {}
-  }
-
-  // --- WebGL Rendering Pipeline ---
-  const container = document.getElementById('canvas-container');
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  container.appendChild(renderer.domElement);
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x7ec0ee);
-  scene.fog = new THREE.FogExp2(0x7ec0ee, 0.01);
-
-  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-  
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-  scene.add(ambientLight);
-
-  const sunLight = new THREE.DirectionalLight(0xfffaed, 1.0);
-  sunLight.position.set(70, 140, 70);
-  sunLight.castShadow = true;
-  sunLight.shadow.mapSize.width = 2048;
-  sunLight.shadow.mapSize.height = 2048;
-  sunLight.shadow.camera.near = 0.5;
-  sunLight.shadow.camera.far = 400;
+  const BLOCK_
