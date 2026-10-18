@@ -49,16 +49,18 @@
   }
   .play-btn:hover { background: #6c37a6; }
   .play-btn:active { transform: scale(0.97); }
+  /* Hidden iframe so the YouTube audio plays in the background */
+  #ytPlayer { display: none; }
 </style>
 </head>
 <body>
 
-<!-- Audio Player: Replace the link with your direct MP3 file link -->
-<audio id="track" loop src="YOUR_DIRECT_MP3_LINK_FOR_LORD_VERITY.mp3"></audio>
+<!-- Hidden YouTube Player: Replace YOUR_YOUTUBE_VIDEO_ID with the actual code from your YouTube video link -->
+<iframe id="ytPlayer" src="https://www.youtube.com/embed/YOUR_YOUTUBE_VIDEO_ID?enablejsapi=1&autoplay=0&loop=1" allow="autoplay"></iframe>
 
 <div class="container">
-  <!-- Creepy image link or placeholder -->
-  <img id="verityImg" src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80" alt="Creepy Lord Verity">
+  <!-- Creepy image -->
+  <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80" alt="Creepy Lord Verity">
   <h1>Lord Verity</h1>
   <p>Master of Humanity</p>
   <button class="play-btn" id="playBtn">Play Song</button>
@@ -66,18 +68,20 @@
 
 <script>
   const playBtn = document.getElementById('playBtn');
-  const track = document.getElementById('track');
+  const iframe = document.getElementById('ytPlayer');
+  let isPlaying = false;
 
   playBtn.addEventListener('click', function() {
-    if (track.paused) {
-      track.play().then(() => {
-        playBtn.textContent = "Pause Song";
-      }).catch(err => {
-        console.log("Audio playback blocked:", err);
-      });
+    if (!isPlaying) {
+      // Tells the hidden YouTube player to play
+      iframe.src = iframe.src.replace('autoplay=0', 'autoplay=1');
+      playBtn.textContent = "Pause Song";
+      isPlaying = true;
     } else {
-      track.pause();
+      // Stops the player
+      iframe.src = iframe.src.replace('autoplay=1', 'autoplay=0');
       playBtn.textContent = "Play Song";
+      isPlaying = false;
     }
   });
 </script>
