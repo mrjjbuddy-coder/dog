@@ -34,11 +34,10 @@
   }
   h1 { margin: 0 0 5px 0; font-size: 1.8rem; color: #d4b5ff; }
   p { color: #8c7aab; font-size: 0.95rem; margin-bottom: 20px; }
-  iframe { 
-    width: 300px; 
-    height: 170px; 
-    border-radius: 8px; 
-    border: 2px solid #3a2550; 
+  audio {
+    width: 100%;
+    outline: none;
+    filter: invert(90%) hue-rotate(200deg);
   }
 </style>
 </head>
@@ -49,8 +48,11 @@
   <h1>Lord Verity</h1>
   <p>Master of Humanity</p>
   
-  <!-- Replace YOUR_YOUTUBE_VIDEO_ID with the actual code from your YouTube link (e.g. dQw4w9WgXcQ) -->
-  <iframe src="https://www.youtube.com/embed/YOUR_YOUTUBE_VIDEO_ID" allow="autoplay"></iframe>
+  <!-- Direct Audio Player -->
+  <audio controls loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
 </div>
 
 </body>
