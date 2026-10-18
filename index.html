@@ -18,14 +18,14 @@
   .container { 
     text-align: center; 
     background: rgba(20, 15, 30, 0.9); 
-    padding: 35px; 
+    padding: 30px; 
     border-radius: 16px; 
     border: 1px solid rgba(255, 255, 255, 0.15); 
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
   }
   img { 
-    width: 260px; 
-    height: 260px; 
+    width: 240px; 
+    height: 240px; 
     object-fit: cover; 
     border-radius: 12px; 
     border: 2px solid #3a2550; 
@@ -33,27 +33,24 @@
     margin-bottom: 20px; 
   }
   h1 { margin: 0 0 5px 0; font-size: 1.8rem; color: #d4b5ff; }
-  p { color: #8c7aab; font-size: 0.95rem; margin-bottom: 25px; }
-  /* Native stylized audio player */
-  audio {
-    width: 100%;
-    outline: none;
-    filter: invert(90%) hue-rotate(200deg);
+  p { color: #8c7aab; font-size: 0.95rem; margin-bottom: 20px; }
+  iframe { 
+    width: 300px; 
+    height: 170px; 
+    border-radius: 8px; 
+    border: 2px solid #3a2550; 
   }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80" alt="Creepy Lord Verity">
+  <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80" alt="Lord Verity">
   <h1>Lord Verity</h1>
   <p>Master of Humanity</p>
   
-  <!-- Standard Audio Player with controls enabled so you can manually hit play -->
-  <audio controls loop>
-    <source src="YOUR_DIRECT_MP3_LINK_HERE.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
-  </audio>
+  <!-- Replace YOUR_YOUTUBE_VIDEO_ID with the actual code from your YouTube link (e.g. dQw4w9WgXcQ) -->
+  <iframe src="https://www.youtube.com/embed/YOUR_YOUTUBE_VIDEO_ID" allow="autoplay"></iframe>
 </div>
 
 </body>
