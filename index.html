@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf8">
-<title>Pawsession - Complete Game</title>
+<title>Pawsession - Lord Verity Edition</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
   body { margin: 0; overflow: hidden; background: #241f3a; font-family: sans-serif; color: #fff3dc; user-select: none; }
@@ -18,12 +18,12 @@
 </head>
 <body>
 
-<!-- Background Music Player (Plays right on the website when started) -->
-<audio id="bgMusic" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+<!-- Background Music Player: Replace the src link with your direct MP3 audio file link -->
+<audio id="bgMusic" loop src="YOUR_DIRECT_MP3_LINK_FOR_LORD_VERITY.mp3"></audio>
 
 <div id="startScreen">
   <h1>Pawsession</h1>
-  <p>Biscuit took your phone! Match the shapes and chase him through the house.<br>Click start to play with background music.</p>
+  <p>Lord Verity is watching... Match the shapes and catch Biscuit!<br>Click start to play with the song playing right on the site.</p>
   <button class="go" id="startBtn">Start the Chase</button>
 </div>
 
@@ -138,12 +138,12 @@
   document.getElementById('startBtn').addEventListener('click', function() {
     var music = document.getElementById('bgMusic');
     if (music) {
-      music.volume = 0.5;
+      music.volume = 0.6;
       music.play().catch(function(error) { console.log("Audio play blocked"); });
     }
     document.getElementById('startScreen').style.display = 'none';
     running = true;
-    toast('Match the shapes and chase Biscuit!');
+    toast('Lord Verity theme playing! Chase Biscuit!');
   });
 
   var joyZone = document.getElementById('joyZone');
