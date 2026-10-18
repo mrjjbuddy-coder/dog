@@ -14,43 +14,32 @@
     justify-content: center; 
     font-family: sans-serif; 
     color: #e0d0f0; 
-    overflow: hidden; 
   }
   .container { 
     text-align: center; 
     background: rgba(20, 15, 30, 0.9); 
-    padding: 30px; 
+    padding: 35px; 
     border-radius: 16px; 
-    border: 1px solid rgba(255, 255, 255, 0.1); 
+    border: 1px solid rgba(255, 255, 255, 0.15); 
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
   }
   img { 
-    width: 280px; 
-    height: 280px; 
+    width: 260px; 
+    height: 260px; 
     object-fit: cover; 
     border-radius: 12px; 
     border: 2px solid #3a2550; 
-    box-shadow: 0 0 20px rgba(100, 20, 150, 0.5);
+    box-shadow: 0 0 25px rgba(100, 20, 150, 0.6);
     margin-bottom: 20px; 
   }
-  h1 { margin: 0 0 10px 0; font-size: 1.8rem; letter-spacing: 1px; color: #d4b5ff; }
-  p { color: #8c7aab; font-size: 0.95rem; margin-bottom: 20px; }
-  .play-btn { 
-    padding: 14px 32px; 
-    background: #5a2e8c; 
-    color: #fff; 
-    border: none; 
-    border-radius: 999px; 
-    font-size: 1rem; 
-    font-weight: bold; 
-    cursor: pointer; 
-    transition: background 0.2s, transform 0.1s; 
-    box-shadow: 0 4px 15px rgba(90, 46, 140, 0.4);
+  h1 { margin: 0 0 5px 0; font-size: 1.8rem; color: #d4b5ff; }
+  p { color: #8c7aab; font-size: 0.95rem; margin-bottom: 25px; }
+  /* Native stylized audio player */
+  audio {
+    width: 100%;
+    outline: none;
+    filter: invert(90%) hue-rotate(200deg);
   }
-  .play-btn:hover { background: #6c37a6; }
-  .play-btn:active { transform: scale(0.97); }
-  /* Keep the YouTube iframe hidden */
-  #player { display: none; }
 </style>
 </head>
 <body>
@@ -59,51 +48,13 @@
   <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80" alt="Creepy Lord Verity">
   <h1>Lord Verity</h1>
   <p>Master of Humanity</p>
-  <button class="play-btn" id="playBtn">Play Song</button>
+  
+  <!-- Standard Audio Player with controls enabled so you can manually hit play -->
+  <audio controls loop>
+    <source src="YOUR_DIRECT_MP3_LINK_HERE.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
 </div>
-
-<!-- Hidden container for the YouTube API player -->
-<div id="player"></div>
-
-<!-- Load YouTube IFrame API Script -->
-<script src="https://www.youtube.com/iframe_api"></script>
-
-<script>
-  let player;
-  let isPlaying = false;
-  const playBtn = document.getElementById('playBtn');
-
-  // This function is automatically called by the YouTube API script when it loads
-  function onYouTubeIframeAPIReady() {
-    player = new YT.Player('player', {
-      height: '0',
-      width: '0',
-      videoId: 'YOUR_YOUTUBE_VIDEO_ID', // <--- REPLACE THIS WITH YOUR VIDEO ID
-      playerVars: {
-        'autoplay': 0,
-        'loop': 1,
-        'playlist': 'YOUR_YOUTUBE_VIDEO_ID' // <--- REPLACE THIS TOO WITH YOUR VIDEO ID (required for looping)
-      },
-      events: {
-        'onReady': onPlayerReady
-      }
-    });
-  }
-
-  function onPlayerReady(event) {
-    playBtn.addEventListener('click', function() {
-      if (!isPlaying) {
-        player.playVideo();
-        playBtn.textContent = "Pause Song";
-        isPlaying = true;
-      } else {
-        player.pauseVideo();
-        playBtn.textContent = "Play Song";
-        isPlaying = false;
-      }
-    });
-  }
-</script>
 
 </body>
 </html>
