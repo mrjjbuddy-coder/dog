@@ -1,1 +1,147 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Pawsession</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* Layout: full-screen 3D stage. Objective card top-left, tools top-right, floating thumb joystick on the left half, Act button bottom-right. */
+:root {
+  --night: #241f3a;
+  --card: rgba(30, 26, 50, 0.84);
+  --cream: #fff3dc;
+  --muted: #bdb4d8;
+  --bone: #ffd35e;
+  --coral: #ff6b5b;
+  --mint: #7be0b0;
+  --line: rgba(255, 243, 220, 0.18);
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--cream);
+  font-family: var(--display);
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#stage { position: relative; width: 100%; height: 100%; overflow: hidden; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible { outline: 2px solid var(--bone); outline-offset: 2px; }
 
+.hud {
+  position: absolute; top: 12px; left: 16px; right: 16px;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+  pointer-events: none;
+}
+.obj {
+  max-width: min(64%, 300px);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+.obj-t { font-weight: 800; font-size: 1rem; letter-spacing: -0.01em; line-height: 1.15; }
+.obj-h { margin-top: 3px; font-size: 0.8rem; line-height: 1.35; color: var(--muted); text-wrap: pretty; }
+.tools { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: auto; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 0.78rem; font-weight: 600;
+}
+.chip svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.batt { font-family: var(--mono); font-weight: 500; pointer-events: none; }
+.bar { position: relative; width: 24px; height: 11px; border: 1.8px solid var(--cream); border-radius: 3px; }
+.bar i { position: absolute; left: 1px; top: 1px; bottom: 1px; width: 40%; background: var(--mint); border-radius: 1px; }
+.bar::after { content: ""; position: absolute; right: -4.5px; top: 2px; width: 2px; height: 4px; background: var(--cream); border-radius: 0 1px 1px 0; }
+
+.joyzone { position: absolute; left: 0; bottom: 0; width: 50%; height: 60%; touch-action: none; }
+.joybase {
+  position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px;
+  border: 2px solid var(--line); border-radius: 50%;
+  background: rgba(255, 243, 220, 0.06);
+  opacity: 0.5; pointer-events: none;
+  transition: opacity 0.15s;
+}
+.joybase.on { opacity: 1; }
+.joyknob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: rgba(255, 243, 220, 0.55); }
+.act {
+  position: absolute; right: 20px; bottom: 44px;
+  width: 88px; height: 88px;
+  border: 2px solid var(--line); border-radius: 50%;
+  background: var(--card);
+  font-weight: 800; font-size: 0.95rem; letter-spacing: 0.01em;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+.act.ready { background: var(--bone); color: #2a2208; border-color: var(--bone); }
+.act:active { transform: scale(0.95); }
+.bubble {
+  position: absolute; transform: translate(-50%, -100%);
+  padding: 5px 11px; border-radius: 12px;
+  background: var(--cream); color: #2a2540;
+  font-weight: 800; font-size: 0.9rem;
+  pointer-events: none; white-space: nowrap;
+}
+.toast {
+  position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%) translateY(8px);
+  max-width: 82%; padding: 9px 14px; text-align: center;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card); font-size: 0.88rem; font-weight: 600;
+  opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 28px 24px; text-align: center;
+  background: rgba(36, 31, 58, 0.93);
+}
+.screen h1 { margin: 0; font-size: clamp(2.5rem, 12vw, 3.6rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.screen h1 span { color: var(--coral); }
+.screen p { margin: 0; max-width: 32ch; font-size: 1rem; line-height: 1.45; color: var(--muted); text-wrap: pretty; }
+.screen p b { color: var(--cream); font-weight: 600; }
+.go {
+  margin-top: 8px; padding: 14px 32px; border: 0; border-radius: 999px;
+  background: var(--bone); color: #2a2208; font-weight: 800; font-size: 1.05rem;
+}
+.go:active { transform: scale(0.97); }
+.stats { font-family: var(--mono); font-size: 0.85rem; color: var(--cream); display: flex; gap: 18px; justify-content: center; }
+#nogl { display: none; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+
+<div id="stage">
+  <canvas id="gl"></canvas>
+
+  <div class="hud">
+    <div class="obj"><div class="obj-t" id="objT"></div><div class="obj-h" id="objH"></div></div>
+    <div class="tools">
+      <div class="chip batt"><span class="bar"><i id="battBar"></i></span><span id="battTxt">37%</span></div>
+      <button class="chip" id="soundBtn" type="button"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="soundWave" d="M16.5 8.5a5 5 0 0 1 0 7"/></svg><span id="soundTxt">Sound on</span></button>
+      <button class="chip" id="resetBtn" type="button" hidden><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Reset crates</button>
+    </div>
+  </div>
+
+  <div class="bubble" id="bubble" hidden>Woof!</div>
+  <div class="toast" id="toast"></div>
+
+  <div class="joyzone" id="joyZone"></div>
+  <div class="joybase" id="joyBase"><div class="joyknob" id="joyKnob"></div></div>
+  <button class="act" id="actBtn" type="button">Turn</button>
+
+  <div class="screen" id="startScreen">
+    <h1>Paw<span>session</span></h1>
+    <p>Biscuit the dog just grabbed <b>your phone</b> and bolted through the house. Solve the puzzles, follow him, and get it back.</p>
+    <p>Drag on the <b>left side</b> to move.
