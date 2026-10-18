@@ -2,162 +2,191 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Catch the Dog - Get My Phone Back!</title>
+    <title>Giant Flying Cheeseburger Shooter</title>
     <style>
-        body { text-align: center; background: #111; color: white; font-family: sans-serif; margin: 0; padding: 20px; }
-        h1 { color: #4caf50; margin-bottom: 5px; }
-        canvas { background: #388e3c; border: 4px solid #fff; display: block; margin: 15px auto; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
-        .info { font-size: 18px; margin: 5px; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; user-select: none; }
+        #ui { position: absolute; top: 15px; left: 20px; color: white; font-size: 22px; text-shadow: 2px 2px 4px #000; pointer-events: none; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; border: 2px solid white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        #instructions { position: absolute; bottom: 15px; width: 100%; text-align: center; color: #aaa; font-size: 14px; pointer-events: none; text-shadow: 1px 1px 2px #000; }
     </style>
 </head>
 <body>
 
-    <h1>Catch the Dog & Get Your Phone Back!</h1>
-    <p class="info">Use <b>Arrow Keys</b> or <b>W/A/S/D</b> to chase the dog!</p>
-    <div class="info">
-        <span id="scoreDisplay">Phones Recovered: 0</span> | 
-        <span id="timerDisplay">Time Left: 30s</span>
-    </div>
+    <div id="ui">Cheeseburgers Destroyed: <span id="score">0</span></div>
+    <div id="crosshair"></div>
+    <div id="instructions">Click anywhere to shoot lasers at the flying cheeseburger! Move mouse to look around.</div>
 
-    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <!-- Include Three.js 3D Engine from a CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+        // 1. Setup Scene, Camera, and Renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue background
 
-        // Game state variables
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 15);
+        scene.add(directionalLight);
+
+        // Ground grid so you have depth perception
+        const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
+        gridHelper.position.y = -2;
+        scene.add(gridHelper);
+
+        // 2. Build the Giant Cheeseburger (Stacked 3D shapes)
+        const burgerGroup = new THREE.Group();
+
+        // Bottom Bun
+        const bottomBunGeo = new THREE.CylinderGeometry(1.5, 1.3, 0.5, 32);
+        const bunMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c });
+        const bottomBun = new THREE.Mesh(bottomBunGeo, bunMat);
+        bottomBun.position.y = -1.2;
+        burgerGroup.add(bottomBun);
+
+        // Burger Patty
+        const pattyGeo = new THREE.CylinderGeometry(1.4, 1.4, 0.4, 32);
+        const pattyMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 });
+        const patty = new THREE.Mesh(pattyGeo, pattyMat);
+        patty.position.y = -0.8;
+        burgerGroup.add(patty);
+
+        // Melted Cheese (Yellow box squeezed out)
+        const cheeseGeo = new THREE.BoxGeometry(2.2, 0.1, 2.2);
+        const cheeseMat = new THREE.MeshStandardMaterial({ color: 0xffcc00 });
+        const cheese = new THREE.Mesh(cheeseGeo, cheeseMat);
+        cheese.position.y = -0.55;
+        cheese.rotation.y = Math.PI / 4;
+        burgerGroup.add(cheese);
+
+        // Top Bun (Dome shape)
+        const topBunGeo = new THREE.SphereGeometry(1.5, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+        const topBun = new THREE.Mesh(topBunGeo, bunMat);
+        topBun.position.y = -0.3;
+        burgerGroup.add(topBun);
+
+        // Scale up the whole burger to make it a "giant" cheeseburger
+        burgerGroup.scale.set(1.5, 1.5, 1.5);
+        burgerGroup.position.set(0, 2, -10);
+        scene.add(burgerGroup);
+
+        // Burger movement variables
+        let burgerVelocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.1,
+            (Math.random() - 0.5) * 0.08,
+            (Math.random() - 0.5) * 0.1
+        );
+
         let score = 0;
-        let timeLeft = 30;
-        let gameOver = false;
-        let gameStarted = true;
+        let bullets = [];
 
-        // Player (You)
-        let player = { x: 100, y: 250, size: 28, speed: 4.5, color: "#2196f3" };
-        
-        // Dog (The thief)
-        let dog = { x: 600, y: 250, size: 25, speed: 3.2, color: "#8d6e63" };
-        
-        // Energy Drink (Boosts speed temporarily)
-        let energyDrink = { x: Math.random() * 700 + 50, y: Math.random() * 400 + 50, size: 15, active: true };
+        // 3. Mouse Look Controls
+        let mouseX = 0, mouseY = 0;
+        let targetRotationX = 0, targetRotationY = 0;
 
-        let keys = {};
+        document.addEventListener("mousemove", (event) => {
+            mouseX = (event.clientX - window.innerWidth / 2) * 0.002;
+            mouseY = (event.clientY - window.innerHeight / 2) * 0.002;
+        });
 
-        window.addEventListener("keydown", (e) => keys[e.key] = true);
-        window.addEventListener("keyup", (e) => keys[e.key] = false);
+        // 4. Shooting Lasers on Click
+        window.addEventListener("click", () => {
+            // Create a laser beam capsule/sphere
+            const bulletGeo = new THREE.SphereGeometry(0.15, 8, 8);
+            const bulletMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const bullet = new THREE.Mesh(bulletGeo, bulletMat);
 
-        // Countdown Timer
-        let timerInterval = setInterval(() => {
-            if (gameStarted && !gameOver) {
-                timeLeft--;
-                document.getElementById("timerDisplay").innerText = "Time Left: " + timeLeft + "s";
-                if (timeLeft <= 0) {
-                    gameOver = true;
-                    clearInterval(timerInterval);
+            bullet.position.copy(camera.position);
+
+            // Calculate direction based on camera rotation
+            const dir = new THREE.Vector3(0, 0, -1);
+            dir.applyQuaternion(camera.quaternion);
+            bullet.velocity = dir.multiplyScalar(0.8);
+
+            scene.add(bullet);
+            bullets.push(bullet);
+        });
+
+        // 5. Game Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Smooth camera look
+            targetRotationY -= mouseX * 0.1;
+            targetRotationX -= mouseY * 0.1;
+            targetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotationX));
+            
+            camera.rotation.order = 'YXZ';
+            camera.rotation.y = targetRotationY;
+            camera.rotation.x = targetRotationX;
+            mouseX = 0;
+ mouseY = 0;
+
+            // Move and spin the giant cheeseburger
+            burgerGroup.position.add(burgerVelocity);
+            burgerGroup.rotation.x += 0.01;
+            burgerGroup.rotation.y += 0.02;
+
+            // Bounce burger off boundaries
+            if (Math.abs(burgerGroup.position.x) > 12) burgerVelocity.x *= -1;
+            if (Math.abs(burgerGroup.position.y - 3) > 5) burgerVelocity.y *= -1;
+            if (Math.abs(burgerGroup.position.z + 10) > 8) burgerVelocity.z *= -1;
+
+            // Update Bullets & Check Collisions
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.position.add(b.velocity);
+
+                // Check distance between bullet and giant cheeseburger
+                let distance = b.position.distanceTo(burgerGroup.position);
+                if (distance < 2.5) {
+                    // Hit! Score point
+                    score++;
+                    document.getElementById("score").innerText = score;
+
+                    // Teleport burger to a new random location
+                    burgerGroup.position.set(
+                        (Math.random() - 0.5) * 10,
+                        Math.random() * 4 + 1,
+                        -Math.random() * 10 - 5
+                    );
+                    burgerVelocity.set(
+                        (Math.random() - 0.5) * 0.15,
+                        (Math.random() - 0.5) * 0.1,
+                        (Math.random() - 0.5) * 0.15
+                    );
+
+                    // Remove bullet
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+                } else if (b.position.distanceTo(camera.position) > 40) {
+                    // Remove bullet if it flies too far out
+                    scene.remove(b);
+                    bullets.splice(i, 1);
                 }
             }
-        }, 1000);
 
-        function update() {
-            if (gameOver) return;
-
-            // Player movement with boundaries
-            if ((keys["ArrowUp"] || keys["w"]) && player.y > 0) player.y -= player.speed;
-            if ((keys["ArrowDown"] || keys["s"]) && player.y < canvas.height - player.size) player.y += player.speed;
-            if ((keys["ArrowLeft"] || keys["a"]) && player.x > 0) player.x -= player.speed;
-            if ((keys["ArrowRight"] || keys["d"]) && player.x < canvas.width - player.size) player.x += player.speed;
-
-            // Smarter Dog AI: Wanders and tries to run away when you get close
-            let dx = player.x - dog.x;
-            let dy = player.y - dog.y;
-            let distToPlayer = Math.sqrt(dx * dx + dy * dy);
-
-            if (distToPlayer < 200) {
-                // Run away from player
-                dog.x -= (dx / distToPlayer) * dog.speed;
-                dog.y -= (dy / distToPlayer) * dog.speed;
-            } else {
-                // Random casual wandering if far away
-                if (Math.random() < 0.05) {
-                    dog.vx = (Math.random() - 0.5) * 4;
-                    dog.vy = (Math.random() - 0.5) * 4;
-                }
-                if (dog.vx) dog.x += dog.vx;
-                if (dog.vy) dog.y += dog.vy;
-            }
-
-            // Keep dog inside canvas bounds
-            dog.x = Math.max(0, Math.min(canvas.width - dog.size, dog.x));
-            dog.y = Math.max(0, Math.min(canvas.height - dog.size, dog.y));
-
-            // Check if player catches the dog (got the phone back!)
-            if (distToPlayer < 30) {
-                score++;
-                document.getElementById("scoreDisplay").innerText = "Phones Recovered: " + score;
-                // Teleport dog to a new random spot
-                dog.x = Math.random() * 700;
-                dog.y = Math.random() * 400;
-                // Increase dog speed slightly for challenge
-                dog.speed += 0.2;
-            }
-
-            // Check if player collects energy drink
-            if (energyDrink.active) {
-                let pdx = player.x - energyDrink.x;
-                let pdy = player.y - energyDrink.y;
-                if (Math.sqrt(pdx * pdx + pdy * pdy) < 25) {
-                    player.speed = 7; // Super speed boost
-                    energyDrink.active = false;
-                    setTimeout(() => { player.speed = 4.5; }, 4000); // Reset after 4 seconds
-                }
-            }
+            renderer.render(scene, camera);
         }
 
-        function draw() {
-            // Background grass pattern effect
-            ctx.fillStyle = "#43a047";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        animate();
 
-            // Draw Energy Drink item if active
-            if (energyDrink.active) {
-                ctx.fillStyle = "#ffeb3b";
-                ctx.fillRect(energyDrink.x, energyDrink.y, energyDrink.size, energyDrink.size);
-            }
-
-            // Draw Phone symbol on the dog (the thief!)
-            ctx.fillStyle = "#00bcd4";
-            ctx.fillRect(dog.x - 5, dog.y - 12, 10, 15); // Phone in mouth
-
-            // Draw Dog
-            ctx.fillStyle = dog.color;
-            ctx.fillRect(dog.x, dog.y, dog.size, dog.size);
-
-            // Draw Player (You)
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.size, player.size);
-
-            // Game Over Screen Overlay
-            if (gameOver) {
-                ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                ctx.fillStyle = "white";
-                ctx.font = "35px sans-serif";
-                ctx.textAlign = "center";
-                ctx.fillText("Time's Up! You got your phone back " + score + " times!", canvas.width / 2, canvas.height / 2 - 20);
-                
-                ctx.font = "18px sans-serif";
-                ctx.fillStyle = "#4caf50";
-                ctx.fillText("Refresh the page to play again!", canvas.width / 2, canvas.height / 2 + 30);
-            }
-        }
-
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
-
-        loop();
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
