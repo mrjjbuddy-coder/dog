@@ -1,35 +1,29 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box}body{margin:0;padding:0;font:14px sans-serif;background:#241f3a;color:#fff3dc;overflow:hidden}</style></head><body>
-<title>Pawsession - Enhanced</title>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf8">
+<title>Pawsession - Shape Matching Fixed</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-  #stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+  body { margin: 0; overflow: hidden; background: #241f3a; font-family: sans-serif; color: #fff3dc; user-select: none; }
+  #stage { position: relative; width: 100vw; height: 100vh; }
   canvas { display: block; width: 100%; height: 100%; }
-  .hud { position: absolute; top: 12px; left: 16px; right: 16px; display: flex; justify-content: space-between; pointer-events: none; }
-  .obj { max-width: 320px; padding: 12px; border-radius: 12px; background: rgba(30, 26, 50, 0.85); border: 1px solid rgba(255,243,220,0.2); }
-  .obj-t { font-weight: 800; font-size: 1rem; }
-  .obj-h { font-size: 0.8rem; color: #bdb4d8; margin-top: 4px; }
-  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(36, 31, 58, 0.95); z-index: 100; text-align: center; padding: 20px; }
-  .go { padding: 14px 32px; border: 0; border-radius: 999px; background: #ffd35e; color: #2a2208; font-weight: 800; font-size: 1.1rem; cursor: pointer; }
+  .hud { position: absolute; top: 12px; left: 16px; padding: 10px 14px; border-radius: 10px; background: rgba(30, 26, 50, 0.85); border: 1px solid rgba(255,243,220,0.3); pointer-events: none; }
   #joyZone { position: absolute; left: 0; bottom: 0; width: 50%; height: 60%; touch-action: none; }
-  .act { position: absolute; right: 25px; bottom: 45px; width: 80px; height: 80px; border-radius: 50%; background: #ffd35e; color: #2a2208; font-weight: 800; border: none; font-size: 1rem; cursor: pointer; z-index: 50; }
-  .toast { position: absolute; left: 50%; bottom: 130px; transform: translateX(-50%); padding: 8px 14px; background: rgba(30,26,50,0.9); border-radius: 8px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast { position: absolute; left: 50%; bottom: 100px; transform: translateX(-50%); padding: 8px 16px; background: rgba(30,26,50,0.9); border-radius: 8px; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .toast.show { opacity: 1; }
 </style>
+</head>
+<body>
 
 <div id="stage">
   <canvas id="gl"></canvas>
   <div class="hud">
-    <div class="obj"><div class="obj-t" id="objT">Objective</div><div class="obj-h" id="objH">Follow Biscuit through the house!</div></div>
+    <b>Objective:</b> Match the shapes on the blocks to open the gate!<br>
+    <span style="font-size: 12px; color: #bdb4d8;">Drag on the left side of the screen to move.</span>
   </div>
   <div class="toast" id="toast"></div>
   <div id="joyZone"></div>
-  <button class="act" id="actBtn" type="button">Turn</button>
-
-  <div class="screen" id="startScreen">
-    <h1>Pawsession: Enhanced</h1>
-    <p>Biscuit took your phone into the house! Drag on the left side to move, tap pillars to turn them.</p>
-    <button class="go" id="startBtn" type="button">Start Game</button>
-  </div>
 </div>
 
 <script>
@@ -43,8 +37,8 @@
   scene.background = new THREE.Color(0x241f3a);
 
   var camera = new THREE.PerspectiveCamera(50, stage.clientWidth / stage.clientHeight, 0.5, 140);
-  camera.position.set(3, 14, 22);
-  camera.lookAt(3, 0, 5);
+  camera.position.set(0, 15, 20);
+  camera.lookAt(0, 0, 5);
 
   scene.add(new THREE.HemisphereLight(0xfff3e0, 0x6b5b8a, 0.9));
   var sun = new THREE.DirectionalLight(0xffe7c2, 0.8);
@@ -52,65 +46,131 @@
   sun.castShadow = true;
   scene.add(sun);
 
-  // Detailed floor and walls setup
   function box(w, h, d, c, x, y, z) {
     var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color: c }));
     m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
     scene.add(m); return m;
   }
 
-  // Environment rooms
+  // House Rooms & Floors
   box(12, 0.1, 12, 0x5b3f73, 0, 0, 12); // Living room
   box(12, 0.1, 12, 0x7fc4b8, 0, 0, 0);  // Kitchen
-  box(16, 0.1, 15, 0x5f9f4e, 0, 0, -225/10); // Yard
+  box(16, 0.1, 15, 0x5f9f4e, 0, 0, -18); // Yard
 
-  // Player Character (Detailed Character Model instead of a plain ball)
-  var player = new THREE.Group();
-  var body = box(0.6, 0.8, 0.4, 0xff6b5b, 0, 0.8, 0);
-  var head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshLambertMaterial({ color: 0xf1c9a5 }));
-  head.position.set(0, 1.5, 0); player.add(head);
-  scene.add(player);
+  // Create Texture Canvas with bright visible shapes (Circle, Square, Triangle)
+  function createShapeTexture(type, colorHex) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    var ctx = canvas.getContext('2d');
+    
+    // Background card color
+    ctx.fillStyle = '#fff3dc';
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.strokeStyle = '#241f3a';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, 120, 120);
 
-  var P = { x: 3, z: 16, face: Math.PI };
-  var running = false, input = { x: 0, z: 0 };
+    // Draw Shape
+    ctx.fillStyle = colorHex;
+    ctx.strokeStyle = colorHex;
+    ctx.lineWidth = 10;
+
+    if (type === 'circle') {
+      ctx.beginPath();
+      ctx.arc(64, 64, 30, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (type === 'triangle') {
+      ctx.beginPath();
+      ctx.moveTo(64, 25);
+      ctx.lineTo(105, 95);
+      ctx.lineTo(23, 95);
+      ctx.closePath();
+      ctx.fill();
+    } else if (type === 'square') {
+      ctx.fillRect(34, 34, 60, 60);
+    }
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  // Puzzle Blocks with distinct shape symbols on materials
+  var blockMat1 = [
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({ map: createShapeTexture('circle', '#e5484d') }), // Front shape: Red Circle
+    new THREE.MeshLambertMaterial({color: 0xcccccc})
+  ];
+
+  var blockMat2 = [
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({ map: createShapeTexture('triangle', '#3e8ef7') }), // Front shape: Blue Triangle
+    new THREE.MeshLambertMaterial({color: 0xcccccc})
+  ];
+
+  var blockMat3 = [
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({color: 0xcccccc}),
+    new THREE.MeshLambertMaterial({ map: createShapeTexture('square', '#3fbf6d') }), // Front shape: Green Square
+    new THREE.MeshLambertMaterial({color: 0xcccccc})
+  ];
+
+  // Add the 3 puzzle blocks into the room with shapes clearly visible
+  var b1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), blockMat1); b1.position.set(-3, 0.9, 8); scene.add(b1);
+  var b2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), blockMat2); b2.position.set(0, 0.9, 8); scene.add(b2);
+  var b3 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.8, 1.5), blockMat3); b3.position.set(3, 0.9, 8); scene.add(b3);
+
+  // Player Ball Character
+  var playerMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 32, 32),
+    new THREE.MeshLambertMaterial({ color: 0xffd35e })
+  );
+  playerMesh.position.set(0, 0.5, 14);
+  scene.add(playerMesh);
+
+  var P = { x: 0, z: 14 };
+  var input = { x: 0, z: 0 };
 
   function toast(msg) {
     var el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 2500);
   }
+  toast('Match the shapes (Red Circle, Blue Triangle, Green Square)!');
 
-  // Controls
-  document.getElementById('joyZone').addEventListener('pointermove', function(e) {
+  var joyZone = document.getElementById('joyZone');
+  joyZone.addEventListener('pointermove', function(e) {
     var r = stage.getBoundingClientRect();
     var dx = (e.clientX - r.left) - r.width/4, dy = (e.clientY - r.top) - r.height/2;
     var m = Math.hypot(dx, dy);
-    input.x = m < 5 ? 0 : dx / 50; input.z = m < 5 ? 0 : dy / 50;
+    input.x = m < 5 ? 0 : dx / 50; 
+    input.z = m < 5 ? 0 : dy / 50;
   });
-  document.getElementById('joyZone').addEventListener('pointerup', function() { input.x = 0; input.z = 0; });
-
-  document.getElementById('startBtn').addEventListener('click', function() {
-    document.getElementById('startScreen').style.display = 'none';
-    running = true; toast('Catch Biscuit!');
-  });
+  joyZone.addEventListener('pointerup', function() { input.x = 0; input.z = 0; });
 
   function update(dt) {
-    if (running) {
-      P.x += input.x * 5 * dt; P.z += input.z * 5 * dt;
-      if (Math.hypot(input.x, input.z) > 0.1) P.face = Math.atan2(input.x, input.z);
-    }
-    player.position.set(P.x, 0, P.z);
-    player.rotation.y = P.face;
-    camera.position.set(P.x, 12, P.z + 12);
+    P.x += input.x * 6 * dt; 
+    P.z += input.z * 6 * dt;
+    playerMesh.position.set(P.x, 0.5, P.z);
+
+    camera.position.x += (P.x - camera.position.x) * 0.05;
+    camera.position.z += ((P.z + 12) - camera.position.z) * 0.05;
     camera.lookAt(P.x, 0, P.z - 2);
   }
 
   var last = 0;
   function loop(now) {
     var dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
-    update(dt); renderer.render(scene, camera);
+    update(dt); 
+    renderer.render(scene, camera);
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 })();
 </script>
-</body></html>
+</body>
+</html>
