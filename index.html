@@ -2,75 +2,137 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Catch the Tiny Man & Save Your Job Applications!</title>
+    <title>Tiny Man Hunt: Job Application Rescue</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; user-select: none; }
-        #ui { position: absolute; top: 15px; left: 20px; color: white; font-size: 20px; text-shadow: 2px 2px 4px #000; pointer-events: none; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 2px solid white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
-        #instructions { position: absolute; bottom: 15px; width: 100%; text-align: center; color: #ddd; font-size: 14px; pointer-events: none; text-shadow: 1px 1px 2px #000; }
+        #ui { position: absolute; top: 15px; left: 20px; color: white; font-size: 20px; text-shadow: 2px 2px 4px #000; pointer-events: none; z-index: 10; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 2px solid white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
+        #instructions { position: absolute; bottom: 15px; width: 100%; text-align: center; color: #ddd; font-size: 14px; pointer-events: none; text-shadow: 1px 1px 2px #000; z-index: 10; }
+        #start-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 20; text-align: center; cursor: pointer; }
+        #start-screen h1 { color: #4caf50; font-size: 36px; margin-bottom: 10px; }
+        #start-screen p { font-size: 18px; color: #ccc; max-width: 600px; line-height: 1.5; }
+        #start-btn { margin-top: 25px; padding: 12px 30px; font-size: 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        #start-btn:hover { background: #45a049; }
     </style>
 </head>
 <body>
 
+    <div id="start-screen">
+        <h1>Tiny Man Hunt: Job Application Rescue</h1>
+        <p>A tiny man has stolen your job applications and is hiding them all over a full multi-room house!<br>Use <b>W/A/S/D</b> to walk and your **Mouse** to look around smoothly.<br><br>Click below to lock your mouse and start the game!</p>
+        <button id="start-btn">Start Game</button>
+    </div>
+
     <div id="ui">
-        Applications Recovered: <span id="score">0</span> | 
-        <span id="timer">Time Left: 45s</span>
+        Applications Found: <span id="score">0</span> / <span id="total-goal">10</span> | 
+        <span id="timer">Time Left: 60s</span>
     </div>
     <div id="crosshair"></div>
-    <div id="instructions">Use <b>W/A/S/D</b> or Arrow Keys to walk around the house. Move mouse to look. Catch the tiny man or grab the dropped applications!</div>
+    <div id="instructions">Use W/A/S/D to move through the house rooms. Press ESC to unlock mouse.</div>
 
-    <!-- Include Three.js 3D Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        // 1. Scene, Camera, Renderer Setup
+        let gameActive = false;
+        let gameOver = false;
+
+        // Setup Start Screen & Pointer Lock
+        const startScreen = document.getElementById("start-screen");
+        const startBtn = document.getElementById("start-btn");
+
+        startBtn.addEventListener("click", () => {
+            document.body.requestPointerLock();
+        });
+
+        document.addEventListener("pointerlockchange", () => {
+            if (document.pointerLockElement === document.body) {
+                startScreen.style.display = "none";
+                gameActive = true;
+            } else {
+                if (!gameOver) {
+                    startScreen.style.display = "flex";
+                    gameActive = false;
+                }
+            }
+        });
+
+        // 1. Scene, Camera, Renderer
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xd7ccc8); // Cozy indoor wall color
+        scene.background = new THREE.Color(0xd7ccc8);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.6, 5); // Human eye-level height
+        camera.position.set(0, 1.6, 12); // Start in hallway/living room
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
 
-        const pointLight = new THREE.PointLight(0xfffaed, 1, 50);
-        pointLight.position.set(0, 4, 0);
+        const pointLight = new THREE.PointLight(0xfffaed, 0.8, 40);
+        pointLight.position.set(0, 3.5, 0);
         scene.add(pointLight);
 
-        // House Floor (Wooden look)
-        const floorGeo = new THREE.PlaneGeometry(30, 30);
+        const pointLight2 = new THREE.PointLight(0xfffaed, 0.8, 40);
+        pointLight2.position.set(0, 3.5, -12);
+        scene.add(pointLight2);
+
+        // 2. Build a Full House Layout (Multiple Rooms & Walls)
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.9 });
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.8 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
+        const woodTrimMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
+
+        // House Floor (Large area: 24x30 units)
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), floorMat);
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // Add a table in the room for hiding spots
-        const tableGroup = new THREE.Group();
-        const tabletopMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
-        const topMesh = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 3), tabletopMat);
-        topMesh.position.y = 1.5;
-        tableGroup.add(topMesh);
-        
-        // Table legs
-        for (let x of [-1.8, 1.8]) {
-            for (let z of [-1.3, 1.3]) {
-                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 0.2), tabletopMat);
-                leg.position.set(x, 0.75, z);
-                tableGroup.add(leg);
-            }
+        // Outer Walls
+        function createWall(w, h, d, x, y, z, ry = 0) {
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+            wall.position.set(x, y, z);
+            wall.rotation.y = ry;
+            scene.add(wall);
+            return wall;
         }
-        scene.add(tableGroup);
-        tableGroup.position.set(0, 0, -5);
 
-        // 2. Build the Tiny Man Character
+        createWall(24, 3, 0.5, 0, 1.5, -15); // Back wall
+        createWall(24, 3, 0.5, 0, 1.5, 15);  // Front wall
+        createWall(0.5, 3, 30, -12, 1.5, 0); // Left wall
+        createWall(0.5, 3, 30, 12, 1.5, 0);  // Right wall
+
+        // Interior Walls (Dividing rooms)
+        createWall(14, 3, 0.4, -5, 1.5, 0);  
+        createWall(0.4, 3, 12, 0, 1.5, 8);   
+
+        // Add Furniture in rooms
+        function createTable(x, z) {
+            const tableGroup = new THREE.Group();
+            const top = new THREE.Mesh(new THREE.BoxGeometry(3, 0.15, 2), woodTrimMat);
+            top.position.y = 1.2;
+            tableGroup.add(top);
+            for (let tx of [-1.3, 1.3]) {
+                for (let tz of [-0.8, 0.8]) {
+                    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.2, 0.15), woodTrimMat);
+                    leg.position.set(tx, 0.6, tz);
+                    tableGroup.add(leg);
+                }
+            }
+            tableGroup.position.set(x, 0, z);
+            scene.add(tableGroup);
+        }
+
+        createTable(-8, -8); 
+        createTable(8, -8);  
+        createTable(-8, 8);  
+        createTable(8, 8);   
+
+        // 3. Tiny Man Character
         const tinyMan = new THREE.Group();
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe53935 }); // Red shirt
-        const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc80 }); // Skin tone
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe53935 });
+        const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc80 });
         
         const tinyBody = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.2), bodyMat);
         tinyBody.position.y = 0.25;
@@ -80,43 +142,68 @@
         tinyHead.position.y = 0.6;
         tinyMan.add(tinyHead);
 
-        tinyMan.position.set(2, 0, -3);
+        tinyMan.position.set(0, 0, -5);
         scene.add(tinyMan);
 
-        // 3. Job Applications (Collectibles)
+        // 4. Job Applications (Collectibles)
         let applications = [];
         function spawnApplication(x, z) {
             const appGeo = new THREE.BoxGeometry(0.4, 0.02, 0.5);
-            const appMat = new THREE.MeshStandardMaterial({ color: 0xffffff }); // White paper
+            const appMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
             const app = new THREE.Mesh(appGeo, appMat);
             app.position.set(x, 0.02, z);
             scene.add(app);
             applications.push(app);
         }
 
-        // Spawn a few initial job applications around the house
-        spawnApplication(-3, -2);
-        spawnApplication(3, -4);
-        spawnApplication(0, -8);
+        const spawnSpots = [
+            [-8, -8], [8, -8], [-8, 8], [8, 8],
+            [-5, 0], [5, -3], [-2, 10], [6, 4],
+            [-10, -3], [10, 3]
+        ];
+        spawnSpots.forEach(pos => spawnApplication(pos[0], pos[1]));
 
-        // Game Variables
+        document.getElementById("total-goal").innerText = spawnSpots.length;
+
+        // Score & Timer
         let score = 0;
-        let timeLeft = 45;
-        let gameOver = false;
+        let timeLeft = 60;
 
-        // Timer countdown
         let timerInterval = setInterval(() => {
-            if (!gameOver) {
+            if (gameActive && !gameOver) {
                 timeLeft--;
                 document.getElementById("timer").innerText = "Time Left: " + timeLeft + "s";
                 if (timeLeft <= 0) {
-                    gameOver = true;
-                    clearInterval(timerInterval);
+                    endGame(false);
                 }
             }
         }, 1000);
 
-        // 4. First-Person Movement Controls (W/A/S/D)
+        function endGame(won) {
+            gameOver = true;
+            gameActive = false;
+            document.exitPointerLock();
+            startScreen.style.display = "flex";
+            startScreen.querySelector("h1").innerText = won ? "You Saved Your Job!" : "Time's Up! You Lost Your Job!";
+            startScreen.querySelector("p").innerText = `You recovered ${score} out of ${spawnSpots.length} job applications.\nClick below to play again!`;
+            startBtn.innerText = "Play Again";
+        }
+
+        // 5. Smooth Mouse Look with Pointer Lock
+        let rx = 0, ry = 0;
+        document.addEventListener("mousemove", (e) => {
+            if (!gameActive) return;
+            const sensitivity = 0.002;
+            ry -= e.movementX * sensitivity;
+            rx -= e.movementY * sensitivity;
+            rx = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, rx));
+            
+            camera.rotation.order = 'YXZ';
+            camera.rotation.y = ry;
+            camera.rotation.x = rx;
+        });
+
+        // Keyboard Controls
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         
         window.addEventListener("keydown", (e) => {
@@ -133,30 +220,12 @@
             if (e.key === "d" || e.key === "ArrowRight") moveRight = false;
         });
 
-        // Mouse Look
-        let mouseX = 0, mouseY = 0;
-        let rx = 0, ry = 0;
-        document.addEventListener("mousemove", (e) => {
-            mouseX = (e.clientX - window.innerWidth / 2) * 0.002;
-            mouseY = (e.clientY - window.innerHeight / 2) * 0.002;
-        });
-
-        // 5. Game Loop
+        // 6. Game Loop
         function animate() {
             requestAnimationFrame(animate);
-            if (gameOver) return;
+            if (!gameActive || gameOver) return;
 
-            // Camera looking rotation
-            ry -= mouseX * 0.8;
-            rx -= mouseY * 0.8;
-            rx = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, rx));
-            camera.rotation.order = 'YXZ';
-            camera.rotation.y = ry;
-            camera.rotation.x = rx;
-            mouseX = 0; mouseY = 0;
-
-            // Player walking movement
-            let speed = 0.08;
+            let speed = 0.1;
             let dir = new THREE.Vector3();
             camera.getWorldDirection(dir);
             dir.y = 0;
@@ -164,35 +233,37 @@
 
             let sideDir = new THREE.Vector3(-dir.z, 0, dir.x);
 
-            if (moveForward) camera.position.addScaledVector(dir, speed);
-            if (moveBackward) camera.position.addScaledVector(dir, -speed);
-            if (moveLeft) camera.position.addScaledVector(sideDir, speed);
-            if (moveRight) camera.position.addScaledVector(sideDir, -speed);
+            let newX = camera.position.x;
+            let newZ = camera.position.z;
 
-            // Keep player inside the room bounds
-            camera.position.x = Math.max(-14, Math.min(14, camera.position.x));
-            camera.position.z = Math.max(-14, Math.min(14, camera.position.z));
-            camera.position.y = 1.6; // Keep head height steady
+            if (moveForward) { newX += dir.x * speed; newZ += dir.z * speed; }
+            if (moveBackward) { newX -= dir.x * speed; newZ -= dir.z * speed; }
+            if (moveLeft) { newX += sideDir.x * speed; newZ += sideDir.z * speed; }
+            if (moveRight) { newX -= sideDir.x * speed; newZ -= sideDir.z * speed; }
 
-            // Tiny Man AI: Scurries around randomly and hides job apps
-            tinyMan.position.x += (Math.random() - 0.5) * 0.08;
-            tinyMan.position.z += (Math.random() - 0.5) * 0.08;
-            tinyMan.rotation.y += 0.05;
+            // House boundaries
+            camera.position.x = Math.max(-11.5, Math.min(11.5, newX));
+            camera.position.z = Math.max(-14.5, Math.min(14.5, newZ));
+            camera.position.y = 1.6;
 
-            // Tiny man drops a new application occasionally
-            if (Math.random() < 0.015) {
-                spawnApplication(tinyMan.position.x, tinyMan.position.z);
-            }
+            // Tiny Man roaming
+            tinyMan.position.x += Math.sin(Date.now() * 0.002) * 0.03;
+            tinyMan.position.z += Math.cos(Date.now() * 0.0015) * 0.03;
+            tinyMan.rotation.y += 0.03;
 
-            // Check if player collects job applications
+            // Check if player collects applications
             for (let i = applications.length - 1; i >= 0; i--) {
                 let app = applications[i];
                 let dist = camera.position.distanceTo(app.position);
-                if (dist < 1.5) {
+                if (dist < 1.4) {
                     score++;
                     document.getElementById("score").innerText = score;
                     scene.remove(app);
                     applications.splice(i, 1);
+
+                    if (score >= spawnSpots.length) {
+                        endGame(true);
+                    }
                 }
             }
 
@@ -201,7 +272,6 @@
 
         animate();
 
-        // Window resize handler
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
