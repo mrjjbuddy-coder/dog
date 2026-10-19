@@ -1,538 +1,475 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>3D Grow a Garden Simulator</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON RUSH 3D</title>
 <style>
-  :root {
-    --bg: #121019;
-    --panel: rgba(24, 20, 37, 0.9);
-    --primary: #58cc02;
-    --accent: #ffb703;
-    --border: rgba(255, 255, 255, 0.15);
-    --text: #ffffff;
-    --text-muted: #b8b0cc;
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; overflow: hidden; background: #08051b;
+    font-family: Arial, sans-serif; color: white;
   }
-  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
-  body, html {
-    margin: 0; padding: 0; width: 100%; height: 100%;
-    background: var(--bg); color: var(--text);
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    overflow: hidden; touch-action: none;
+  canvas { display: block; }
+  #hud {
+    position: fixed; top: 18px; left: 18px; right: 18px;
+    display: flex; justify-content: space-between;
+    gap: 10px; pointer-events: none; z-index: 2;
   }
-  #canvas-container { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-
-  /* HUD Layer */
-  .hud { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 10; }
-  .hud-top { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
-
-  .currency-pill {
-    background: var(--panel); border: 2px solid var(--border);
-    padding: 10px 20px; border-radius: 999px; font-weight: 800; font-size: 1.1rem;
-    display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-    backdrop-filter: blur(8px); color: var(--accent); pointer-events: auto;
+  .panel {
+    background: #100b2ddd; border: 1px solid #7e5cff;
+    border-radius: 14px; padding: 12px 16px;
+    box-shadow: 0 0 20px #743cff55;
   }
-
-  .nav-buttons { display: flex; gap: 10px; pointer-events: auto; }
-  .nav-btn {
-    background: #6c5ce7; border: none; color: #fff; padding: 12px 20px;
-    border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.95rem;
-    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4); transition: transform 0.1s, background 0.2s;
+  #score { font-size: 24px; font-weight: bold; color: #54faff; }
+  #message {
+    position: fixed; inset: 0; display: grid;
+    place-items: center; text-align: center; z-index: 3;
+    background: #07041a88;
   }
-  .nav-btn:hover { background: #5b4bc4; }
-  .nav-btn:active { transform: scale(0.95); }
-
-  /* Hotbar at Bottom */
-  .hotbar {
-    position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 10px; background: var(--panel); padding: 10px; border-radius: 20px;
-    border: 2px solid var(--border); pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  #card {
+    padding: 30px; max-width: 440px; margin: 18px;
+    background: #100b2df2; border: 1px solid #54faff;
+    border-radius: 24px; box-shadow: 0 0 45px #6a30ff66;
   }
-  .seed-slot {
-    width: 65px; height: 65px; border-radius: 14px; background: rgba(255,255,255,0.05);
-    border: 2px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center;
-    cursor: pointer; position: relative; transition: transform 0.1s, border-color 0.1s;
+  h1 { font-size: clamp(34px, 8vw, 58px); margin: 0 0 12px;
+       color: #54faff; text-shadow: 0 0 22px #00d9ff; }
+  button {
+    padding: 15px 26px; border: 0; border-radius: 12px;
+    color: #09051a; background: #54faff;
+    font-size: 18px; font-weight: bold; cursor: pointer;
   }
-  .seed-slot.active { border-color: var(--primary); transform: scale(1.1); box-shadow: 0 0 15px rgba(88, 204, 2, 0.5); }
-  .seed-slot span { font-size: 1.6rem; }
-  .seed-cost { position: absolute; bottom: 3px; font-size: 0.7rem; color: var(--accent); font-weight: bold; }
-
-  /* Crosshair for 3D look-around */
-  .crosshair {
-    position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
-    transform: translate(-50%, -50%); pointer-events: none; opacity: 0.7;
-  }
-  .crosshair::before, .crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 4px rgba(0,0,0,0.8); }
-  .crosshair::before { top: 4px; left: 0; width: 10px; height: 2px; }
-  .crosshair::after { top: 0; left: 4px; width: 2px; height: 10px; }
-
-  /* Modals */
-  .modal {
-    position: absolute; inset: 0; background: rgba(10, 8, 18, 0.85); backdrop-filter: blur(12px);
-    display: flex; align-items: center; justify-content: center; z-index: 100;
-    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
-  }
-  .modal.open { opacity: 1; pointer-events: auto; }
-  .modal-box {
-    background: var(--panel); border: 2px solid var(--border); border-radius: 20px;
-    width: 90%; max-width: 480px; max-height: 85vh; display: flex; flex-direction: column;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.7); overflow: hidden;
-  }
-  .modal-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-  .modal-header h2 { margin: 0; font-size: 1.4rem; color: #fff; }
-  .close-btn { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
-  .modal-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-
-  .shop-item, .pet-card {
-    background: rgba(255,255,255,0.04); border: 2px solid var(--border); border-radius: 12px;
-    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
-  }
-  .item-info { display: flex; align-items: center; gap: 12px; }
-  .item-icon { font-size: 2rem; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; }
-
-  .toast {
-    position: absolute; top: 90px; left: 50%; transform: translateX(-50%) translateY(-10px);
-    background: var(--panel); border: 1px solid var(--border); padding: 10px 24px;
-    border-radius: 30px; font-weight: 700; font-size: 0.95rem; opacity: 0; transition: opacity 0.3s, transform 0.3s;
-    pointer-events: none; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.5); color: var(--accent);
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  button:hover { background: #b3fcff; transform: scale(1.04); }
+  #help { position: fixed; bottom: 15px; left: 0; right: 0;
+    text-align: center; color: white; text-shadow: 0 2px 8px black;
+    font-size: 13px; pointer-events: none; }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-
-<div id="canvas-container"></div>
-<div class="crosshair"></div>
-
-<div class="hud">
-  <div class="hud-top">
-    <div class="currency-pill">🪙 <span id="coin-count">100</span></div>
-    <div class="nav-buttons">
-      <button class="nav-btn" id="btn-shop">Shop</button>
-      <button class="nav-btn" id="btn-pets">Pets</button>
-    </div>
-  </div>
-
-  <div class="hotbar" id="hotbar"></div>
+<div id="hud">
+  <div class="panel">💎 SCORE <div id="score">0</div></div>
+  <div class="panel">❤️ LIVES <div id="lives">3</div></div>
+  <div class="panel">⚡ SPEED <div id="speed">1.0x</div></div>
 </div>
 
-<div class="toast" id="toast"></div>
-
-<!-- Shop Modal -->
-<div class="modal" id="modal-shop">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h2>Seed & Tool Shop</h2>
-      <button class="close-btn" onclick="closeModals()">×</button>
-    </div>
-    <div class="modal-body" id="shop-list"></div>
+<div id="message">
+  <div id="card">
+    <h1>NEON RUSH</h1>
+    <p>Welcome to the neon dimension! 🌌</p>
+    <p>Collect gems, dodge deadly blocks, and survive as the world gets faster.</p>
+    <p>⬅️ ➡️ Switch lanes<br>⬆️ or SPACE to jump</p>
+    <button id="start">LET'S PLAY 🚀</button>
   </div>
 </div>
+<div id="help">A / D or ← / → to move · SPACE / ↑ to jump · P to pause</div>
 
-<!-- Pets Modal -->
-<div class="modal" id="modal-pets">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h2>Garden Pets</h2>
-      <button class="close-btn" onclick="closeModals()">×</button>
-    </div>
-    <div class="modal-body">
-      <div style="text-align: center; margin-bottom: 10px;">
-        <div style="font-size: 3rem;">🥚</div>
-        <button class="nav-btn" id="hatch-btn" style="margin-top: 10px; width: 100%;">Hatch Egg (150 🪙)</button>
-      </div>
-      <div id="pets-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-    </div>
-  </div>
-</div>
+<script type="module">
+import * as THREE from
+  'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 
-<script>
-(function() {
-  'use strict';
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x08051b);
+scene.fog = new THREE.Fog(0x08051b, 28, 115);
 
-  let coins = 100;
-  let selectedSeed = 0;
+const camera = new THREE.PerspectiveCamera(
+  70, innerWidth / innerHeight, 0.1, 180
+);
+camera.position.set(0, 6, 11);
 
-  const SEEDS = [
-    { name: 'Carrot', emoji: '🥕', cost: 0, growTime: 3, reward: 15, color: 0xff7f50 },
-    { name: 'Tomato', emoji: '🍅', cost: 25, growTime: 5, reward: 45, color: 0xff4d4d },
-    { name: 'Watermelon', emoji: '🍉', cost: 80, growTime: 8, reward: 150, color: 0x2ed573 },
-    { name: 'Gold Apple', emoji: '🍎', cost: 250, growTime: 12, reward: 550, color: 0xffd700 }
-  ];
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.4;
+document.body.appendChild(renderer.domElement);
 
-  const PET_TYPES = [
-    { id: 'bunny', name: 'Garden Bunny', emoji: '🐰', bonus: '1.2x Coins', mult: 1.2, chance: 0.6 },
-    { id: 'bee', name: 'Busy Bee', emoji: '🐝', bonus: '1.5x Coins', mult: 1.5, chance: 0.3 },
-    { id: 'gnome', name: 'Golden Gnome', emoji: '🧙‍♂️', bonus: '2.5x Coins', mult: 2.5, chance: 0.1 }
-  ];
+scene.add(new THREE.HemisphereLight(0x8dbbff, 0x170521, 2));
 
-  let inventory = [];
-  let equippedPet = null;
+const light = new THREE.DirectionalLight(0xffffff, 3);
+light.position.set(-5, 12, 7);
+light.castShadow = true;
+scene.add(light);
 
-  // Farm Plots (4x4 3D grid)
-  const plots = [];
-  for (let i = 0; i < 16; i++) {
-    plots.push({ state: 'empty', seedIdx: 0, plantedTime: 0, cropMesh: null });
-  }
+const pinkLight = new THREE.PointLight(0xff00cc, 35, 35);
+pinkLight.position.set(0, 5, -10);
+scene.add(pinkLight);
 
-  try {
-    const saved = localStorage.getItem('grow_garden_3d_save');
-    if (saved) {
-      const data = JSON.parse(saved);
-      coins = data.coins ?? 100;
-      inventory = data.inventory ?? [];
-      equippedPet = data.equippedPet ?? null;
-    }
-  } catch(e) {}
+const cyanLight = new THREE.PointLight(0x00eaff, 30, 30);
+cyanLight.position.set(7, 4, -20);
+scene.add(cyanLight);
 
-  function saveGame() {
-    try {
-      localStorage.setItem('grow_garden_3d_save', JSON.stringify({ coins, inventory, equippedPet }));
-    } catch(e) {}
-  }
+const mats = {
+  floor: new THREE.MeshStandardMaterial({
+    color: 0x15102f, metalness: 0.7, roughness: 0.35
+  }),
+  cyan: new THREE.MeshStandardMaterial({
+    color: 0x00f5ff, emissive: 0x00bccc,
+    emissiveIntensity: 2, metalness: 0.4, roughness: 0.2
+  }),
+  pink: new THREE.MeshStandardMaterial({
+    color: 0xff20c8, emissive: 0xcc0088,
+    emissiveIntensity: 1.8, metalness: 0.3, roughness: 0.25
+  }),
+  gold: new THREE.MeshStandardMaterial({
+    color: 0xffd83d, emissive: 0xff9900,
+    emissiveIntensity: 1.6, metalness: 0.7, roughness: 0.2
+  }),
+  block: new THREE.MeshStandardMaterial({
+    color: 0x7b2cff, emissive: 0x4a00bb,
+    emissiveIntensity: 1.1, metalness: 0.45, roughness: 0.25
+  })
+};
 
-  function getCoinMultiplier() {
-    if (!equippedPet) return 1;
-    const p = PET_TYPES.find(t => t.id === equippedPet);
-    return p ? p.mult : 1;
-  }
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(13, 180),
+  mats.floor
+);
+floor.rotation.x = -Math.PI / 2;
+floor.position.set(0, -0.12, -55);
+floor.receiveShadow = true;
+scene.add(floor);
 
-  // --- Three.js 3D Setup ---
-  const container = document.getElementById('canvas-container');
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  container.appendChild(renderer.domElement);
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87ceeb);
-  scene.fog = new THREE.FogExp2(0x87ceeb, 0.012);
-
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-  
-  // Lighting
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x446622, 0.8));
-  const sun = new THREE.DirectionalLight(0xfffaed, 0.9);
-  sun.position.set(20, 40, 20);
-  sun.castShadow = true;
-  scene.add(sun);
-
-  // Ground
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(100, 100),
-    new THREE.MeshLambertMaterial({ color: 0x55a630 })
+// Glowing road edges and lane markers
+const lines = [];
+for (const x of [-6, -2, 2, 6]) {
+  const line = new THREE.Mesh(
+    new THREE.BoxGeometry(0.055, 0.035, 180),
+    mats.cyan
   );
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
+  line.position.set(x, -0.07, -55);
+  scene.add(line);
+}
+for (let z = 10; z > -130; z -= 5) {
+  for (const x of [-1.33, 1.33]) {
+    const mark = new THREE.Mesh(
+      new THREE.BoxGeometry(0.035, 0.025, 2.2), mats.pink
+    );
+    mark.position.set(x, -0.055, z);
+    scene.add(mark);
+    lines.push(mark);
+  }
+}
 
-  // Build Farm Plots in 3D Space (4x4 Grid)
-  const plotGroup = new THREE.Group();
-  scene.add(plotGroup);
-
-  const plotGeo = new THREE.BoxGeometry(2.0, 0.15, 2.0);
-  const plotMat = new THREE.MeshLambertMaterial({ color: 0x654321 });
-
-  plots.forEach((p, idx) => {
-    const row = Math.floor(idx / 4);
-    const col = idx % 4;
-    const x = (col - 1.5) * 2.8;
-    const z = (row - 1.5) * 2.8 - 4.0;
-
-    const mesh = new THREE.Mesh(plotGeo, plotMat);
-    mesh.position.set(x, 0.08, z);
-    mesh.receiveShadow = true;
-    mesh.userData = { plotIndex: idx };
-    plotGroup.add(mesh);
-  });
-
-  // Pet 3D Mesh
-  const petMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.35, 16, 16),
-    new THREE.MeshLambertMaterial({ color: 0xffd700 })
+// Futuristic skyline
+const buildings = [];
+for (let i = 0; i < 65; i++) {
+  const side = Math.random() < 0.5 ? -1 : 1;
+  const h = 3 + Math.random() * 17;
+  const w = 1.5 + Math.random() * 3;
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, 2 + Math.random() * 4),
+    new THREE.MeshStandardMaterial({
+      color: 0x15133b,
+      emissive: Math.random() < 0.5 ? 0x230c6c : 0x082b55,
+      emissiveIntensity: 1.2,
+      metalness: 0.65, roughness: 0.3
+    })
   );
-  petMesh.castShadow = true;
-  scene.add(petMesh);
-  petMesh.visible = false;
+  mesh.position.set(side * (8 + Math.random() * 14),
+                   h / 2 - 0.2, -Math.random() * 130);
+  scene.add(mesh);
+  buildings.push(mesh);
+}
 
-  // --- Camera Look Around Controls (Mouse & Touch) ---
-  let cameraYaw = 0, cameraPitch = 0.3;
-  let cameraDist = 12;
-  let targetLookPos = new THREE.Vector3(0, 1, -2);
+// Player robot
+const player = new THREE.Group();
+scene.add(player);
 
-  let isPointerLocked = false;
-  renderer.domElement.addEventListener('click', () => {
-    if (!isPointerLocked && !document.querySelector('.modal.open')) {
-      renderer.domElement.requestPointerLock();
-    }
-  });
+const body = new THREE.Mesh(
+  new THREE.BoxGeometry(0.85, 1.05, 0.65), mats.block
+);
+body.position.y = 1.0;
+body.castShadow = true;
+player.add(body);
 
-  document.addEventListener('pointerlockchange', () => {
-    isPointerLocked = document.pointerLockElement === renderer.domElement;
-  });
+const head = new THREE.Mesh(
+  new THREE.BoxGeometry(0.72, 0.55, 0.7), mats.cyan
+);
+head.position.y = 1.82;
+head.castShadow = true;
+player.add(head);
 
-  document.addEventListener('mousemove', e => {
-    if (!isPointerLocked) return;
-    cameraYaw -= e.movementX * 0.003;
-    cameraPitch -= e.movementY * 0.003;
-    cameraPitch = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, cameraPitch));
-  });
+const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+for (const x of [-0.18, 0.18]) {
+  const eye = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.09, 0.04), eyeMat
+  );
+  eye.position.set(x, 1.87, -0.36);
+  player.add(eye);
+}
 
-  // Raycasting to click/plant on plots in 3D
-  const raycaster = new THREE.Raycaster();
-  const mouse = new THREE.Vector2();
+const legs = [];
+for (const x of [-0.24, 0.24]) {
+  const leg = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.55, 0.28), mats.pink
+  );
+  leg.position.set(x, 0.35, 0);
+  leg.castShadow = true;
+  player.add(leg);
+  legs.push(leg);
+}
 
-  renderer.domElement.addEventListener('pointerdown', e => {
-    if (!isPointerLocked) return;
-    
-    mouse.x = 0; mouse.y = 0; // Center screen crosshair click
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(plotGroup.children);
-    if (intersects.length > 0) {
-      const idx = intersects[0].object.userData.plotIndex;
-      handlePlotClick(idx);
-    }
-  });
+player.position.set(0, 0, 3);
 
-  function handlePlotClick(idx) {
-    const plot = plots[idx];
-    const seed = SEEDS[selectedSeed];
+// Game objects
+const objects = [];
+const lanes = [-4, 0, 4];
+let score = 0, lives = 3, speed = 22;
+let running = false, paused = false, ended = false;
+let lane = 1, jumpY = 0, jumpV = 0;
+let spawnTimer = 0, boostTimer = 0, hitCooldown = 0;
+let lastTime = 0;
 
-    if (plot.state === 'empty') {
-      if (coins < seed.cost && seed.cost > 0) {
-        showToast("Not enough coins!");
-        return;
-      }
-      if (seed.cost > 0) {
-        coins -= seed.cost;
-        updateHUD();
-        saveGame();
-      }
-      plot.state = 'growing';
-      plot.seedIdx = selectedSeed;
-      plot.plantedTime = performance.now();
-      updatePlotMesh(idx);
-    } else if (plot.state === 'ready') {
-      const reward = Math.round(seed.reward * getCoinMultiplier());
-      coins += reward;
-      showToast(`Harvested +${reward} 🪙`);
-      plot.state = 'empty';
-      updatePlotMesh(idx);
-      updateHUD();
-      saveGame();
-    }
+function addObject(type, x, z) {
+  let mesh;
+  if (type === 'gem') {
+    mesh = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.58), mats.gold
+    );
+  } else if (type === 'boost') {
+    mesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.7, 0.16, 8, 20), mats.cyan
+    );
+  } else {
+    mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 1.7, 1.25), mats.pink
+    );
+    // Decorative glowing obstacle core
+    const core = new THREE.Mesh(
+      new THREE.BoxGeometry(0.85, 0.85, 0.85), mats.block
+    );
+    mesh.add(core);
+    core.position.z = -0.67;
   }
+  mesh.position.set(x, type === 'obstacle' ? 0.85 : 1.25, z);
+  mesh.castShadow = true;
+  scene.add(mesh);
+  objects.push({ mesh, type, hit: false });
+}
 
-  function updatePlotMesh(idx) {
-    const plot = plots[idx];
-    const row = Math.floor(idx / 4);
-    const col = idx % 4;
-    const x = (col - 1.5) * 2.8;
-    const z = (row - 1.5) * 2.8 - 4.0;
+function spawnWave() {
+  const r = Math.random();
+  const obstacleLane = Math.floor(Math.random() * 3);
+  const z = -80;
 
-    if (plot.cropMesh) {
-      scene.remove(plot.cropMesh);
-      plot.cropMesh = null;
-    }
-
-    if (plot.state === 'growing' || plot.state === 'ready') {
-      const seed = SEEDS[plot.seedIdx];
-      const scale = plot.state === 'ready' ? 1.2 : 0.4;
-      const cropMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.45, 12, 12),
-        new THREE.MeshLambertMaterial({ color: seed.color })
-      );
-      cropMesh.scale.set(scale, scale * 1.6, scale);
-      cropMesh.position.set(x, 0.5, z);
-      cropMesh.castShadow = true;
-      scene.add(cropMesh);
-      plot.cropMesh = cropMesh;
-    }
+  if (r < 0.52) {
+    addObject('obstacle', lanes[obstacleLane], z);
+    // Gem trail in another lane
+    const other = lanes[(obstacleLane + 1 + Math.floor(Math.random() * 2)) % 3];
+    for (let i = 0; i < 4; i++) addObject('gem', other, z - 7 - i * 3);
+  } else if (r < 0.9) {
+    const gemLane = lanes[Math.floor(Math.random() * 3)];
+    for (let i = 0; i < 6; i++) addObject('gem', gemLane, z - i * 3);
+  } else {
+    addObject('boost', lanes[Math.floor(Math.random() * 3)], z);
+    addObject('gem', lanes[1], z - 7);
   }
+}
 
-  // --- UI & Hotbar ---
-  const coinEl = document.getElementById('coin-count');
-  function updateHUD() {
-    coinEl.textContent = Math.floor(coins).toLocaleString();
-    renderHotbar();
-  }
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const speedEl = document.getElementById('speed');
+const message = document.getElementById('message');
+const card = document.getElementById('card');
 
-  function renderHotbar() {
-    const hotbar = document.getElementById('hotbar');
-    hotbar.innerHTML = '';
-    SEEDS.forEach((seed, i) => {
-      const slot = document.createElement('div');
-      slot.className = `seed-slot ${i === selectedSeed ? 'active' : ''}`;
-      slot.innerHTML = `
-        <span>${seed.emoji}</span>
-        <div class="seed-cost">${seed.cost === 0 ? 'FREE' : seed.cost + '🪙'}</div>
-      `;
-      slot.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectedSeed = i;
-        renderHotbar();
-      });
-      hotbar.appendChild(slot);
-    });
-  }
+function updateHUD() {
+  scoreEl.textContent = Math.floor(score);
+  livesEl.textContent = '❤️ '.repeat(lives).trim() || '0';
+  speedEl.textContent = (speed / 22).toFixed(1) + 'x';
+}
+
+function startGame() {
+  for (const o of objects) scene.remove(o.mesh);
+  objects.length = 0;
+  score = 0;
+  lives = 3;
+  speed = 22;
+  lane = 1;
+  jumpY = 0;
+  jumpV = 0;
+  spawnTimer = 0.5;
+  boostTimer = 0;
+  hitCooldown = 0;
+  player.position.set(0, 0, 3);
+  running = true;
+  paused = false;
+  ended = false;
+  message.style.display = 'none';
   updateHUD();
+}
 
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2000);
-  }
+function gameOver() {
+  running = false;
+  ended = true;
+  card.innerHTML = `
+    <h1>GAME OVER!</h1>
+    <p>✨ Final score: <b>${Math.floor(score)}</b></p>
+    <p>${score >= 300 ? 'NEON LEGEND! 🌟' : 'The neon world awaits your comeback!'}</p>
+    <button id="start">PLAY AGAIN 🚀</button>`;
+  message.style.display = 'grid';
+  document.getElementById('start').onclick = startGame;
+}
 
-  window.closeModals = function() {
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
-  };
+document.getElementById('start').onclick = startGame;
 
-  document.getElementById('btn-shop').addEventListener('click', () => {
-    if (document.pointerLockElement) document.exitPointerLock();
-    renderShop();
-    document.getElementById('modal-shop').classList.add('open');
-  });
+function moveLane(direction) {
+  if (!running || paused) return;
+  lane = THREE.MathUtils.clamp(lane + direction, 0, 2);
+}
 
-  document.getElementById('btn-pets').addEventListener('click', () => {
-    if (document.pointerLockElement) document.exitPointerLock();
-    renderPets();
-    document.getElementById('modal-pets').classList.add('open');
-  });
+function jump() {
+  if (!running || paused || jumpY > 0.05) return;
+  jumpV = 10.5;
+}
 
-  function renderShop() {
-    const list = document.getElementById('shop-list');
-    list.innerHTML = '';
-    SEEDS.forEach((seed, idx) => {
-      const item = document.createElement('div');
-      item.className = 'shop-item';
-      item.innerHTML = `
-        <div class="item-info">
-          <div class="item-icon">${seed.emoji}</div>
-          <div>
-            <div style="font-weight: bold;">${seed.name} Seed</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">Grow time: ${seed.growTime}s | Sells for: ${seed.reward}🪙</div>
-          </div>
-        </div>
-        <button class="nav-btn" style="padding: 8px 14px;">Select</button>
-      `;
-      item.querySelector('button').addEventListener('click', () => {
-        selectedSeed = idx;
-        renderHotbar();
-        closeModals();
-        showToast(`Equipped ${seed.name} seeds!`);
-      });
-      list.appendChild(item);
+addEventListener('keydown', e => {
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', ' '].includes(e.key))
+    e.preventDefault();
+  if (e.repeat) return;
+  if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') moveLane(-1);
+  if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') moveLane(1);
+  if (e.key === 'ArrowUp' || e.key === ' ') jump();
+  if (e.key.toLowerCase() === 'p' && running) paused = !paused;
+});
+
+let touchX = null;
+addEventListener('touchstart', e => {
+  touchX = e.touches[0].clientX;
+}, { passive: true });
+
+addEventListener('touchend', e => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 35) moveLane(dx > 0 ? 1 : -1);
+  else jump();
+  touchX = null;
+}, { passive: true });
+
+function animate(time) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((time - lastTime) / 1000 || 0, 0.04);
+  lastTime = time;
+
+  if (running && !paused) {
+    score += dt * 2;
+    speed = Math.min(42, speed + dt * 0.16);
+    if (boostTimer > 0) {
+      boostTimer -= dt;
+      speed = 34;
+    }
+    hitCooldown = Math.max(0, hitCooldown - dt);
+
+    // Smooth lane switching
+    player.position.x = THREE.MathUtils.damp(
+      player.position.x, lanes[lane], 12, dt
+    );
+
+    // Jump physics
+    jumpV -= 25 * dt;
+    jumpY += jumpV * dt;
+    if (jumpY < 0) {
+      jumpY = 0;
+      jumpV = 0;
+    }
+    player.position.y = jumpY;
+
+    // Running animation
+    legs.forEach((leg, i) => {
+      leg.rotation.x = jumpY > 0.05 ? 0 :
+        Math.sin(time * 0.015 + i * Math.PI) * 0.65;
     });
-  }
+    body.rotation.z = Math.sin(time * 0.008) * 0.045;
+    head.rotation.y = Math.sin(time * 0.004) * 0.08;
 
-  document.getElementById('hatch-btn').addEventListener('click', () => {
-    const cost = 150;
-    if (coins < cost) {
-      showToast("Need 150 🪙 to hatch an egg!");
-      return;
-    }
-    coins -= cost;
-    updateHUD();
-
-    const rand = Math.random();
-    let cumulative = 0;
-    let chosen = PET_TYPES[0];
-    for (let p of PET_TYPES) {
-      cumulative += p.chance;
-      if (rand <= cumulative) { chosen = p; break; }
+    // Objects move toward the player
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnWave();
+      spawnTimer = Math.max(0.48, 1.05 - score / 250);
     }
 
-    inventory.push(chosen.id);
-    equippedPet = chosen.id;
-    saveGame();
-    renderPets();
-    petMesh.visible = true;
-    showToast(`Hatched a ${chosen.name}! 🎉`);
-  });
+    for (let i = objects.length - 1; i >= 0; i--) {
+      const o = objects[i];
+      o.mesh.position.z += speed * dt;
+      o.mesh.rotation.y += dt * 2.5;
 
-  function renderPets() {
-    const list = document.getElementById('pets-list');
-    list.innerHTML = '';
-    if (inventory.length === 0) {
-      list.innerHTML = '<div style="color: var(--text-muted); text-align: center;">No pets hatched yet! Hatch an egg above.</div>';
-      return;
-    }
-    inventory.forEach((petId) => {
-      const p = PET_TYPES.find(t => t.id === petId);
-      const isEq = equippedPet === petId;
-      const card = document.createElement('div');
-      card.className = 'pet-card';
-      card.innerHTML = `
-        <div class="item-info">
-          <div class="item-icon">${p.emoji}</div>
-          <div>
-            <div style="font-weight: bold;">${p.name}</div>
-            <div style="font-size: 0.8rem; color: var(--accent);">Bonus: ${p.bonus}</div>
-          </div>
-        </div>
-        <button class="nav-btn" style="background: ${isEq ? '#2ed573' : '#6c5ce7'}; padding: 6px 14px;">${isEq ? 'Equipped' : 'Equip'}</button>
-      `;
-      card.querySelector('button').addEventListener('click', () => {
-        equippedPet = petId;
-        petMesh.visible = true;
-        saveGame();
-        renderPets();
-      });
-      list.appendChild(card);
-    });
-  }
+      const dx = Math.abs(o.mesh.position.x - player.position.x);
+      const dz = Math.abs(o.mesh.position.z - 3);
+      const close = dx < 1.35 && dz < 1.15;
 
-  // --- Animation & Render Loop ---
-  const clock = new THREE.Clock();
-
-  function animate() {
-    requestAnimationFrame(animate);
-    const now = performance.now();
-    const time = clock.getElapsedTime();
-
-    // Check Crop Growth
-    plots.forEach((plot, idx) => {
-      if (plot.state === 'growing') {
-        const seed = SEEDS[plot.seedIdx];
-        if ((now - plot.plantedTime) / 1000 >= seed.growTime) {
-          plot.state = 'ready';
-          updatePlotMesh(idx);
+      if (close && o.type === 'gem') {
+        score += 25;
+        scene.remove(o.mesh);
+        objects.splice(i, 1);
+        continue;
+      }
+      if (close && o.type === 'boost') {
+        boostTimer = 2.5;
+        score += 50;
+        scene.remove(o.mesh);
+        objects.splice(i, 1);
+        continue;
+      }
+      if (close && o.type === 'obstacle' &&
+          jumpY < 1.05 && hitCooldown <= 0 && !o.hit) {
+        lives--;
+        hitCooldown = 1.1;
+        o.hit = true;
+        scene.remove(o.mesh);
+        objects.splice(i, 1);
+        updateHUD();
+        if (lives <= 0) {
+          gameOver();
+          break;
         }
+        continue;
+      }
+      if (o.mesh.position.z > 15) {
+        scene.remove(o.mesh);
+        objects.splice(i, 1);
+      }
+    }
+
+    // Endless glowing floor markers
+    lines.forEach(line => {
+      line.position.z += speed * dt;
+      if (line.position.z > 12) line.position.z -= 140;
+    });
+
+    // Recycle buildings for an endless city
+    buildings.forEach(b => {
+      b.position.z += speed * dt * 0.72;
+      if (b.position.z > 18) {
+        b.position.z -= 135;
+        b.position.y = 2 + Math.random() * 16;
       }
     });
 
-    // Animate Pet orbiting
-    if (equippedPet) {
-      petMesh.visible = true;
-      const angle = time * 2;
-      petMesh.position.x = Math.cos(angle) * 5;
-      petMesh.position.z = Math.sin(angle) * 5 - 2;
-      petMesh.position.y = 0.5 + Math.sin(time * 6) * 0.15;
-    }
-
-    // Smooth Camera Orbit positioning based on mouse look angles
-    const cx = targetLookPos.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * cameraDist;
-    const cy = targetLookPos.y + Math.sin(cameraPitch) * cameraDist;
-    const cz = targetLookPos.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * cameraDist;
-
-    camera.position.set(cx, cy, cz);
-    camera.lookAt(targetLookPos);
-
-    renderer.render(scene, camera);
+    camera.position.x = THREE.MathUtils.damp(
+      camera.position.x, player.position.x * 0.25, 3, dt
+    );
+    camera.lookAt(player.position.x * 0.2, 1.3, -5);
+    updateHUD();
+  } else if (paused) {
+    camera.lookAt(player.position.x * 0.2, 1.3, -5);
   }
-  animate();
 
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+  // Animated neon lights
+  pinkLight.position.x = Math.sin(time * 0.0007) * 7;
+  cyanLight.position.x = Math.cos(time * 0.0009) * 7;
 
-})();
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
 </script>
 </body>
 </html>
