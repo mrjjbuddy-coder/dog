@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>3D Zombie Outbreak Arena</title>
+<title>Grow a Garden Simulator</title>
 <style>
   :root {
-    --bg: #0b0914;
-    --panel: rgba(20, 16, 32, 0.9);
-    --accent: #ff3838;
-    --accent-glow: rgba(255, 56, 56, 0.5);
-    --text: #f8f5ff;
-    --text-muted: #9e93b8;
+    --bg: #1e1b2e;
+    --panel: rgba(24, 20, 37, 0.92);
+    --primary: #58cc02;
+    --accent: #ffb703;
     --border: rgba(255, 255, 255, 0.15);
+    --text: #ffffff;
+    --text-muted: #b8b0cc;
   }
   * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
   body, html {
@@ -22,45 +22,76 @@
     overflow: hidden; touch-action: none;
   }
   #canvas-container { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  
-  /* HUD Layer */
-  .hud { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 10; }
+
+  /* HUD */
+  .hud { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; z-index: 10; }
   .hud-top { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
-  
-  .panel {
-    background: var(--panel); border: 1px solid var(--border);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    border-radius: 14px; padding: 12px 20px; pointer-events: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6); font-weight: 700; font-size: 1rem;
+
+  .currencies { display: flex; gap: 12px; pointer-events: auto; }
+  .currency-pill {
+    background: var(--panel); border: 2px solid var(--border);
+    padding: 8px 18px; border-radius: 999px; font-weight: 800; font-size: 1.05rem;
+    display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px); color: var(--accent);
   }
-  .stats-grid { display: flex; gap: 20px; }
-  .stat-item span { color: var(--text-muted); font-size: 0.8rem; display: block; }
-  .stat-item b { font-size: 1.2rem; color: #fff; }
 
-  /* Mobile Joysticks */
-  .joystick-zone { position: absolute; left: 30px; bottom: 30px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 2px dashed rgba(255,255,255,0.15); pointer-events: auto; display: none; }
-  .joystick-knob { position: absolute; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.3); top: 40px; left: 40px; pointer-events: none; }
+  .nav-buttons { display: flex; gap: 10px; pointer-events: auto; }
+  .nav-btn {
+    background: #6c5ce7; border: none; color: #fff; padding: 10px 18px;
+    border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.9rem;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4); transition: transform 0.1s, background 0.2s;
+  }
+  .nav-btn:hover { background: #5b4bc4; }
+  .nav-btn:active { transform: scale(0.95); }
 
-  /* Main Menu Overlay */
+  /* Seed Inventory Hotbar at Bottom */
+  .hotbar {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; background: var(--panel); padding: 10px; border-radius: 20px;
+    border: 2px solid var(--border); pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  }
+  .seed-slot {
+    width: 60px; height: 60px; border-radius: 14px; background: rgba(255,255,255,0.05);
+    border: 2px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; position: relative; transition: transform 0.1s, border-color 0.1s;
+  }
+  .seed-slot.active { border-color: var(--primary); transform: scale(1.1); box-shadow: 0 0 15px rgba(88, 204, 2, 0.5); }
+  .seed-slot span { font-size: 1.5rem; }
+  .seed-cost { position: absolute; bottom: 2px; font-size: 0.65rem; color: var(--accent); font-weight: bold; }
+
+  /* Modals */
   .modal {
-    position: absolute; inset: 0; background: rgba(8, 6, 14, 0.95); backdrop-filter: blur(20px);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    z-index: 100; padding: 24px; text-align: center; transition: opacity 0.3s;
+    position: absolute; inset: 0; background: rgba(10, 8, 18, 0.85); backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
   }
-  .modal.hidden { opacity: 0; pointer-events: none; }
-  .title { font-size: clamp(2.5rem, 7vw, 4.5rem); font-weight: 900; margin: 0 0 10px 0; color: #fff; text-shadow: 0 4px 20px var(--accent-glow); }
-  .title span { color: var(--accent); }
-  .desc { max-width: 42ch; color: var(--text-muted); font-size: 1rem; line-height: 1.6; margin-bottom: 28px; }
-  
-  .btn {
-    background: var(--accent); border: none; color: #fff; padding: 16px 40px;
-    border-radius: 999px; font-weight: 900; font-size: 1.2rem; cursor: pointer;
-    box-shadow: 0 8px 25px var(--accent-glow); transition: transform 0.1s, background 0.2s;
+  .modal.open { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    background: var(--panel); border: 2px solid var(--border); border-radius: 20px;
+    width: 90%; max-width: 480px; max-height: 85vh; display: flex; flex-direction: column;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.7); overflow: hidden;
   }
-  .btn:hover { background: #ff4d4d; }
-  .btn:active { transform: scale(0.95); }
+  .modal-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  .modal-header h2 { margin: 0; font-size: 1.4rem; color: #fff; }
+  .close-btn { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+  .modal-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 
-  @media (pointer: coarse) { .joystick-zone { display: block; } }
+  /* List items */
+  .shop-item, .pet-card {
+    background: rgba(255,255,255,0.04); border: 2px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .item-info { display: flex; align-items: center; gap: 12px; }
+  .item-icon { font-size: 2rem; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; }
+
+  /* Toast Notification */
+  .toast {
+    position: absolute; top: 80px; left: 50%; transform: translateX(-50%) translateY(-10px);
+    background: var(--panel); border: 1px solid var(--border); padding: 10px 24px;
+    border-radius: 30px; font-weight: 700; font-size: 0.95rem; opacity: 0; transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.5); color: var(--accent);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -68,30 +99,103 @@
 
 <div id="canvas-container"></div>
 
-<div class="hud" id="hud" style="display: none;">
+<div class="hud">
   <div class="hud-top">
-    <div class="panel stats-grid">
-      <div class="stat-item"><span>HEALTH</span><b id="hp-val" style="color: #2ed573;">100</b></div>
-      <div class="stat-item"><span>AMMO</span><b id="ammo-val">30 / 30</b></div>
-      <div class="stat-item"><span>SCORE</span><b id="score-val">0</b></div>
+    <div class="currencies">
+      <div class="currency-pill">🪙 <span id="coin-count">100</span></div>
     </div>
-    <div class="panel">
-      <span style="color: var(--text-muted); font-size: 0.75rem; display: block;">WAVE</span>
-      <b id="wave-val" style="font-size: 1.3rem; color: var(--accent);">1</b>
+    <div class="nav-buttons">
+      <button class="nav-btn" id="btn-shop">Shop</button>
+      <button class="nav-btn" id="btn-pets">Pets</button>
+    </div>
+  </div>
+
+  <div class="hotbar" id="hotbar"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Shop Modal -->
+<div class="modal" id="modal-shop">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Seed & Tool Shop</h2>
+      <button class="close-btn" onclick="closeModals()">×</button>
+    </div>
+    <div class="modal-body" id="shop-list"></div>
+  </div>
+</div>
+
+<!-- Pets Modal -->
+<div class="modal" id="modal-pets">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Garden Pets</h2>
+      <button class="close-btn" onclick="closeModals()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align: center; margin-bottom: 10px;">
+        <div style="font-size: 3rem;">🥚</div>
+        <button class="nav-btn" id="hatch-btn" style="margin-top: 10px; width: 100%;">Hatch Egg (150 🪙)</button>
+      </div>
+      <div id="pets-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
     </div>
   </div>
 </div>
 
-<div class="joystick-zone" id="joy-zone"><div class="joystick-knob" id="joy-knob"></div></div>
-
-<div class="modal" id="menu">
-  <h1 class="title">3D ZOMBIE <span>ARENA</span></h1>
-  <p class="desc">Fully 3D arcade survival. Move with WASD, aim and click to shoot 3D bullets, and survive incoming waves of the undead!</p>
-  <button class="btn" id="start-btn">PLAY 3D GAME</button>
-</div>
-
 <script>
 (function() {
+  'use strict';
+
+  let coins = 100;
+  let selectedSeed = 0; // Index in seeds array
+
+  const SEEDS = [
+    { name: 'Carrot', emoji: '🥕', cost: 0, growTime: 3, reward: 15, color: 0xff7f50 },
+    { name: 'Tomato', emoji: '🍅', cost: 25, growTime: 5, reward: 45, color: 0xff4d4d },
+    { name: 'Watermelon', emoji: '🍉', cost: 80, growTime: 8, reward: 150, color: 0x2ed573 },
+    { name: 'Gold Apple', emoji: '🍎', cost: 250, growTime: 12, reward: 550, color: 0xffd700 }
+  ];
+
+  const PET_TYPES = [
+    { id: 'bunny', name: 'Garden Bunny', emoji: '🐰', bonus: '1.2x Coins', mult: 1.2, chance: 0.6 },
+    { id: 'bee', name: 'Busy Bee', emoji: '🐝', bonus: '1.5x Coins', mult: 1.5, chance: 0.3 },
+    { id: 'gnome', name: 'Golden Gnome', emoji: '🧙‍♂️', bonus: '2.5x Coins', mult: 2.5, chance: 0.1 }
+  ];
+
+  let inventory = [];
+  let equippedPet = null;
+
+  // Farm Plots Data (3x3 grid = 9 plots)
+  const plots = [];
+  for (let i = 0; i < 9; i++) {
+    plots.push({ state: 'empty', seedIdx: 0, plantedTime: 0, progress: 0, mesh: null });
+  }
+
+  // Load Save
+  try {
+    const saved = localStorage.getItem('grow_garden_save');
+    if (saved) {
+      const data = JSON.parse(saved);
+      coins = data.coins ?? 100;
+      inventory = data.inventory ?? [];
+      equippedPet = data.equippedPet ?? null;
+    }
+  } catch(e) {}
+
+  function saveGame() {
+    try {
+      localStorage.setItem('grow_garden_save', JSON.stringify({ coins, inventory, equippedPet }));
+    } catch(e) {}
+  }
+
+  function getCoinMultiplier() {
+    if (!equippedPet) return 1;
+    const p = PET_TYPES.find(t => t.id === equippedPet);
+    return p ? p.mult : 1;
+  }
+
+  // --- Three.js Setup ---
   const container = document.getElementById('canvas-container');
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -100,339 +204,301 @@
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0914);
-  scene.fog = new THREE.FogExp2(0x0b0914, 0.02);
+  scene.background = new THREE.Color(0x87ceeb); // Sky blue
+  scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
 
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 22, 16);
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 14, 12);
   camera.lookAt(0, 0, 0);
 
-  // Lighting
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x332244, 0.7));
-  const sun = new THREE.DirectionalLight(0xfff3e0, 0.8);
-  sun.position.set(15, 25, 15);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x446622, 0.8));
+  const sun = new THREE.DirectionalLight(0xfffaed, 0.9);
+  sun.position.set(10, 25, 10);
   sun.castShadow = true;
   scene.add(sun);
 
-  // Arena Floor
-  const floor = new THREE.Mesh(
+  // Grass Field Ground
+  const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(60, 60),
-    new THREE.MeshLambertMaterial({ color: 0x181424 })
+    new THREE.MeshLambertMaterial({ color: 0x55a630 })
   );
-  floor.rotation.x = -Math.PI / 2;
-  floor.receiveShadow = true;
-  scene.add(floor);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
 
-  // Arena Wall boundary boxes
-  function makeWall(w, h, d, x, z) {
-    const wall = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, d),
-      new THREE.MeshLambertMaterial({ color: 0x241d38 })
-    );
-    wall.position.set(x, h/2, z);
-    wall.castShadow = true; wall.receiveShadow = true;
-    scene.add(wall);
-  }
-  makeWall(60, 3, 2, 0, -30);
-  makeWall(60, 3, 2, 0, 30);
-  makeWall(2, 3, 60, -30, 0);
-  makeWall(2, 3, 60, 30, 0);
+  // Build Farm Plot Meshes in a 3x3 Grid
+  const plotGroup = new THREE.Group();
+  scene.add(plotGroup);
 
-  // Player Mesh (3D Group)
-  const playerGroup = new THREE.Group();
-  scene.add(playerGroup);
+  const plotGeo = new THREE.BoxGeometry(2.2, 0.15, 2.2);
+  const plotMat = new THREE.MeshLambertMaterial({ color: 0x654321 }); // Brown soil
 
-  const bodyMesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.6, 0.6, 1.2, 16),
-    new THREE.MeshLambertMaterial({ color: 0x58cc02 })
-  );
-  bodyMesh.position.y = 0.6;
-  bodyMesh.castShadow = true;
-  playerGroup.add(bodyMesh);
+  plots.forEach((p, idx) => {
+    const row = Math.floor(idx / 3);
+    const col = idx % 3;
+    const x = (col - 1) * 3.0;
+    const z = (row - 1) * 3.0 - 1.0;
 
-  const headMesh = new THREE.Mesh(
+    const mesh = new THREE.Mesh(plotGeo, plotMat);
+    mesh.position.set(x, 0.08, z);
+    mesh.receiveShadow = true;
+    mesh.userData = { plotIndex: idx };
+    plotGroup.add(mesh);
+  });
+
+  // Pet 3D Mesh
+  const petMesh = new THREE.Mesh(
     new THREE.SphereGeometry(0.4, 16, 16),
-    new THREE.MeshLambertMaterial({ color: 0xf1c9a5 })
+    new THREE.MeshLambertMaterial({ color: 0xffd700 })
   );
-  headMesh.position.y = 1.4;
-  headMesh.castShadow = true;
-  playerGroup.add(headMesh);
+  petMesh.castShadow = true;
+  scene.add(petMesh);
+  petMesh.visible = false;
 
-  // Audio Context for Sound Effects
-  let audioCtx = null;
-  function playSound(type) {
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const t = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
-
-      if (type === 'shoot') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(140, t);
-        osc.frequency.exponentialRampToValueAtTime(30, t + 0.1);
-        gain.gain.setValueAtTime(0.2, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-        osc.start(t); osc.stop(t + 0.12);
-      } else if (type === 'hit') {
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(90, t);
-        osc.frequency.linearRampToValueAtTime(30, t + 0.15);
-        gain.gain.setValueAtTime(0.3, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        osc.start(t); osc.stop(t + 0.16);
-      }
-    } catch(e) {}
-  }
-
-  // Game State
-  let gameRunning = false;
-  let score = 0, wave = 1;
-  let player = {
-    x: 0, z: 0, speed: 0.18, hp: 100, maxHp: 100,
-    ammo: 30, maxAmmo: 30, reloading: false
-  };
-
-  let zombies = [];
-  let bullets = [];
-  let drops = [];
-
-  const keys = {};
-  window.addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'KeyR') reloadGun(); });
-  window.addEventListener('keyup', e => { keys[e.code] = false; });
-
-  // Raycasting for 3D Aiming from Mouse
+  // --- Raycasting for Clicking Plots ---
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
-  let mouseWorldPos = new THREE.Vector3();
-  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-  window.addEventListener('mousemove', e => {
+  window.addEventListener('pointerdown', e => {
+    // Ignore UI clicks
+    if (e.target.closest('.hud') || e.target.closest('.modal')) return;
+
     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
-    raycaster.ray.intersectPlane(plane, mouseWorldPos);
+
+    const intersects = raycaster.intersectObjects(plotGroup.children);
+    if (intersects.length > 0) {
+      const idx = intersects[0].object.userData.plotIndex;
+      handlePlotClick(idx);
+    }
   });
 
-  let mouseDown = false;
-  window.addEventListener('mousedown', e => { if (e.button === 0) mouseDown = true; });
-  window.addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
+  function handlePlotClick(idx) {
+    const plot = plots[idx];
+    const seed = SEEDS[selectedSeed];
 
-  function reloadGun() {
-    if (player.reloading || player.ammo === player.maxAmmo) return;
-    player.reloading = true;
-    setTimeout(() => {
-      player.ammo = player.maxAmmo;
-      player.reloading = false;
+    if (plot.state === 'empty') {
+      if (coins < seed.cost && seed.cost > 0) {
+        showToast("Not enough coins!");
+        return;
+      }
+      if (seed.cost > 0) {
+        coins -= seed.cost;
+        updateHUD();
+        saveGame();
+      }
+      plot.state = 'growing';
+      plot.seedIdx = selectedSeed;
+      plot.plantedTime = performance.now();
+      plot.progress = 0;
+      updatePlotMesh(idx);
+    } else if (plot.state === 'ready') {
+      const reward = Math.round(seed.reward * getCoinMultiplier());
+      coins += reward;
+      showToast(`Harvested +${reward} 🪙`);
+      plot.state = 'empty';
+      updatePlotMesh(idx);
       updateHUD();
-    }, 1200);
-  }
-
-  function spawnWave() {
-    const count = 4 + wave * 3;
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 24 + Math.random() * 6;
-      const x = Math.cos(angle) * dist;
-      const z = Math.sin(angle) * dist;
-
-      // Create 3D Zombie Mesh
-      const zMesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.5, 0.5, 1.4, 12),
-        new THREE.MeshLambertMaterial({ color: 0x228b22 })
-      );
-      zMesh.position.set(x, 0.7, z);
-      zMesh.castShadow = true;
-      scene.add(zMesh);
-
-      zombies.push({
-        mesh: zMesh,
-        speed: 0.05 + Math.random() * 0.02 + (wave * 0.005),
-        hp: 30 + (wave * 10)
-      });
+      saveGame();
     }
   }
 
-  function updateHUD() {
-    document.getElementById('hp-val').textContent = Math.max(0, Math.round(player.hp));
-    document.getElementById('ammo-val').textContent = player.reloading ? 'RELOADING...' : `${player.ammo} / ${player.maxAmmo}`;
-    document.getElementById('score-val').textContent = score;
-    document.getElementById('wave-val').textContent = wave;
+  function updatePlotMesh(idx) {
+    const plot = plots[idx];
+    const row = Math.floor(idx / 3);
+    const col = idx % 3;
+    const x = (col - 1) * 3.0;
+    const z = (row - 1) * 3.0 - 1.0;
+
+    // Remove old crop mesh if it exists
+    if (plot.cropMesh) {
+      scene.remove(plot.cropMesh);
+      plot.cropMesh = null;
+    }
+
+    if (plot.state === 'growing' || plot.state === 'ready') {
+      const seed = SEEDS[plot.seedIdx];
+      const scale = plot.state === 'ready' ? 1 : 0.4;
+      const cropMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 12, 12),
+        new THREE.MeshLambertMaterial({ color: seed.color })
+      );
+      cropMesh.scale.set(scale, scale * 1.5, scale);
+      cropMesh.position.set(x, 0.5, z);
+      cropMesh.castShadow = true;
+      scene.add(cropMesh);
+      plot.cropMesh = cropMesh;
+    }
   }
 
-  let lastShoot = 0;
-  function shootBullet() {
-    if (player.reloading || player.ammo <= 0) { if (player.ammo <= 0) reloadGun(); return; }
-    const now = performance.now();
-    if (now - lastShoot < 150) return;
-    lastShoot = now;
+  // --- UI & Hotbar ---
+  const coinEl = document.getElementById('coin-count');
+  function updateHUD() {
+    coinEl.textContent = Math.floor(coins).toLocaleString();
+    renderHotbar();
+  }
 
-    player.ammo--;
-    playSound('shoot');
-    updateHUD();
+  function renderHotbar() {
+    const hotbar = document.getElementById('hotbar');
+    hotbar.innerHTML = '';
+    SEEDS.forEach((seed, i) => {
+      const slot = document.createElement('div');
+      slot.className = `seed-slot ${i === selectedSeed ? 'active' : ''}`;
+      slot.innerHTML = `
+        <span>${seed.emoji}</span>
+        <div class="seed-cost">${seed.cost === 0 ? 'FREE' : seed.cost + '🪙'}</div>
+      `;
+      slot.addEventListener('click', () => {
+        selectedSeed = i;
+        renderHotbar();
+      });
+      hotbar.appendChild(slot);
+    });
+  }
+  updateHUD();
 
-    const bulletMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.2, 8, 8),
-      new THREE.MeshBasicMaterial({ color: 0xffe600 })
-    );
-    bulletMesh.position.set(player.x, 1.0, player.z);
-    scene.add(bulletMesh);
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
 
-    const angle = Math.atan2(mouseWorldPos.x - player.x, mouseWorldPos.z - player.z);
-    bullets.push({
-      mesh: bulletMesh,
-      vx: Math.sin(angle) * 0.8,
-      vz: Math.cos(angle) * 0.8,
-      life: 60
+  // Modals
+  window.closeModals = function() {
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+  };
+
+  document.getElementById('btn-shop').addEventListener('click', () => {
+    renderShop();
+    document.getElementById('modal-shop').classList.add('open');
+  });
+
+  document.getElementById('btn-pets').addEventListener('click', () => {
+    renderPets();
+    document.getElementById('modal-pets').classList.add('open');
+  });
+
+  function renderShop() {
+    const list = document.getElementById('shop-list');
+    list.innerHTML = '';
+    SEEDS.forEach((seed, idx) => {
+      const item = document.createElement('div');
+      item.className = 'shop-item';
+      item.innerHTML = `
+        <div class="item-info">
+          <div class="item-icon">${seed.emoji}</div>
+          <div>
+            <div style="font-weight: bold;">${seed.name} Seed</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Grow time: ${seed.growTime}s | Sells for: ${seed.reward}🪙</div>
+          </div>
+        </div>
+        <button class="nav-btn" style="padding: 8px 14px;">Select</button>
+      `;
+      item.querySelector('button').addEventListener('click', () => {
+        selectedSeed = idx;
+        renderHotbar();
+        closeModals();
+        showToast(`Equipped ${seed.name} seeds!`);
+      });
+      list.appendChild(item);
     });
   }
 
-  // Mobile joystick variables
-  let joyActive = false, joyVector = { x: 0, z: 0 };
-  const joyZone = document.getElementById('joy-zone');
-  const joyKnob = document.getElementById('joy-knob');
-  let joyTouchId = null, joyOrigin = { x: 0, y: 0 };
+  // Pet Hatching
+  document.getElementById('hatch-btn').addEventListener('click', () => {
+    const cost = 150;
+    if (coins < cost) {
+      showToast("Need 150 🪙 to hatch an egg!");
+      return;
+    }
+    coins -= cost;
+    updateHUD();
 
-  joyZone.addEventListener('touchstart', e => {
-    if (joyTouchId !== null) return;
-    const t = e.changedTouches[0];
-    joyTouchId = t.identifier;
-    const rect = joyZone.getBoundingClientRect();
-    joyOrigin = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-    joyActive = true;
+    const rand = Math.random();
+    let cumulative = 0;
+    let chosen = PET_TYPES[0];
+    for (let p of PET_TYPES) {
+      cumulative += p.chance;
+      if (rand <= cumulative) {
+        chosen = p;
+        break;
+      }
+    }
+
+    inventory.push(chosen.id);
+    equippedPet = chosen.id;
+    saveGame();
+    renderPets();
+    petMesh.visible = true;
+    showToast(`Hatched a ${chosen.name}! 🎉`);
   });
 
-  joyZone.addEventListener('touchmove', e => {
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const t = e.changedTouches[i];
-      if (t.identifier === joyTouchId) {
-        const dx = t.clientX - joyOrigin.x, dy = t.clientY - joyOrigin.y;
-        const dist = Math.hypot(dx, dy), maxDist = 45, angle = Math.atan2(dy, dx);
-        const clampedDist = Math.min(dist, maxDist);
-        joyKnob.style.transform = `translate(${Math.cos(angle) * clampedDist}px, ${Math.sin(angle) * clampedDist}px)`;
-        joyVector.x = Math.cos(angle) * (clampedDist / maxDist);
-        joyVector.z = Math.sin(angle) * (clampedDist / maxDist);
-      }
+  function renderPets() {
+    const list = document.getElementById('pets-list');
+    list.innerHTML = '';
+    if (inventory.length === 0) {
+      list.innerHTML = '<div style="color: var(--text-muted); text-align: center;">No pets hatched yet! Hatch an egg above.</div>';
+      return;
     }
-  });
-
-  function endTouch(e) {
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      if (e.changedTouches[i].identifier === joyTouchId) {
-        joyTouchId = null; joyActive = false;
-        joyKnob.style.transform = `translate(0px, 0px)`;
-        joyVector.x = 0; joyVector.z = 0;
-      }
-    }
+    inventory.forEach((petId, idx) => {
+      const p = PET_TYPES.find(t => t.id === petId);
+      const isEq = equippedPet === petId;
+      const card = document.createElement('div');
+      card.className = 'pet-card';
+      card.innerHTML = `
+        <div class="item-info">
+          <div class="item-icon">${p.emoji}</div>
+          <div>
+            <div style="font-weight: bold;">${p.name}</div>
+            <div style="font-size: 0.8rem; color: var(--accent);">Bonus: ${p.bonus}</div>
+          </div>
+        </div>
+        <button class="nav-btn" style="background: ${isEq ? '#2ed573' : '#6c5ce7'}; padding: 6px 14px;">${isEq ? 'Equipped' : 'Equip'}</button>
+      `;
+      card.querySelector('button').addEventListener('click', () => {
+        equippedPet = petId;
+        petMesh.visible = true;
+        saveGame();
+        renderPets();
+      });
+      list.appendChild(card);
+    });
   }
-  joyZone.addEventListener('touchend', endTouch);
-  joyZone.addEventListener('touchcancel', endTouch);
 
-  // Game Loop
-  function update() {
-    if (!gameRunning) return;
-
-    // Player Movement
-    let dx = 0, dz = 0;
-    if (keys['KeyW'] || keys['ArrowUp']) dz -= 1;
-    if (keys['KeyS'] || keys['ArrowDown']) dz += 1;
-    if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
-    if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
-
-    if (dx !== 0 && dz !== 0) { dx *= 0.7071; dz *= 0.7071; }
-
-    if (joyActive) {
-      player.x += joyVector.x * player.speed * 1.5;
-      player.z += joyVector.z * player.speed * 1.5;
-    } else {
-      player.x += dx * player.speed;
-      player.z += dz * player.speed;
-    }
-
-    // Boundaries
-    player.x = Math.max(-27, Math.min(27, player.x));
-    player.z = Math.max(-27, Math.min(27, player.z));
-
-    playerGroup.position.set(player.x, 0, player.z);
-    playerGroup.rotation.y = Math.atan2(mouseWorldPos.x - player.x, mouseWorldPos.z - player.z);
-
-    if (mouseDown) shootBullet();
-
-    // Update Bullets
-    for (let i = bullets.length - 1; i >= 0; i--) {
-      let b = bullets[i];
-      b.mesh.position.x += b.vx;
-      b.mesh.position.z += b.vz;
-      b.life--;
-
-      if (b.life <= 0) {
-        scene.remove(b.mesh);
-        bullets.splice(i, 1);
-        continue;
-      }
-
-      // Check collision with zombies
-      for (let j = zombies.length - 1; j >= 0; j--) {
-        let z = zombies[j];
-        if (b.mesh.position.distanceTo(z.mesh.position) < 1.0) {
-          z.hp -= 25;
-          scene.remove(b.mesh);
-          bullets.splice(i, 1);
-
-          if (z.hp <= 0) {
-            scene.remove(z.mesh);
-            zombies.splice(j, 1);
-            score += 100;
-            if (zombies.length === 0) {
-              wave++;
-              spawnWave();
-            }
-          }
-          break;
-        }
-      }
-    }
-
-    // Update Zombies
-    for (let z of zombies) {
-      const angle = Math.atan2(player.x - z.mesh.position.x, player.z - z.mesh.position.z);
-      z.mesh.position.x += Math.sin(angle) * z.speed;
-      z.mesh.position.z += Math.cos(angle) * z.speed;
-
-      // Damage player
-      if (z.mesh.position.distanceTo(playerGroup.position) < 1.2) {
-        player.hp -= 0.6;
-        playSound('hit');
-        updateHUD();
-        if (player.hp <= 0) {
-          gameRunning = false;
-          document.getElementById('menu').classList.remove('hidden');
-          document.getElementById('hud').style.display = 'none';
-        }
-      }
-    }
-  }
+  // --- Animation Loop ---
+  const clock = new THREE.Clock();
 
   function animate() {
     requestAnimationFrame(animate);
-    update();
+    const now = performance.now();
+    const time = clock.getElapsedTime();
+
+    // Check Crop Growth Progress
+    plots.forEach((plot, idx) => {
+      if (plot.state === 'growing') {
+        const seed = SEEDS[plot.seedIdx];
+        const elapsed = (now - plot.plantedTime) / 1000;
+        if (elapsed >= seed.growTime) {
+          plot.state = 'ready';
+          updatePlotMesh(idx);
+        }
+      }
+    });
+
+    // Animate Pet orbiting the farm
+    if (equippedPet) {
+      petMesh.visible = true;
+      const angle = time * 2;
+      petMesh.position.x = Math.cos(angle) * 5;
+      petMesh.position.z = Math.sin(angle) * 5;
+      petMesh.position.y = 0.5 + Math.sin(time * 6) * 0.15;
+    }
+
     renderer.render(scene, camera);
   }
   animate();
-
-  document.getElementById('start-btn').addEventListener('click', () => {
-    player.hp = 100; player.ammo = 30; score = 0; wave = 1;
-    zombies.forEach(z => scene.remove(z.mesh));
-    bullets.forEach(b => scene.remove(b.mesh));
-    zombies = []; bullets = [];
-    spawnWave();
-    gameRunning = true;
-    document.getElementById('menu').classList.add('hidden');
-    document.getElementById('hud').style.display = 'flex';
-    updateHUD();
-  });
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
